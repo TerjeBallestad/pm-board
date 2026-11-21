@@ -33,11 +33,55 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
         working-directory: client
+      - run: npx tsc -p tsconfig.json
+        working-directory: client
       - run: npm run build
         working-directory: client
+      - run: node --test shared/glossary.test.mjs
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: pm_board
+          POSTGRES_PASSWORD: pm_board
+          POSTGRES_DB: pm_board
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pm_board" --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: dotnet build server/PmBoard.slnx
+      - run: npm ci
+        working-directory: client
+      - run: npx playwright install --with-deps chromium
+        working-directory: client
+      - run: npm run build
+        working-directory: client
+      # e2e/stack.mjs wipes this database, imports e2e/fixture.json, and serves client/dist.
+      - run: npm run e2e
+        working-directory: client
+        env:
+          E2E_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: client/playwright-report/
+          retention-days: 14
 
   image:
-    needs: [server, client]
+    needs: [server, client, e2e]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

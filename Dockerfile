@@ -5,6 +5,8 @@ WORKDIR /src/client
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
 COPY client/ ./
+# The glossary module is shared with the CLI and imported from ../shared.
+COPY shared/ /src/shared/
 RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS server

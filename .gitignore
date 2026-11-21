@@ -6,3 +6,5 @@ dist/
 .DS_Store
 .vs/
 *.user
+test-results/
+playwright-report/

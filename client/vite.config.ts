@@ -1,11 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { '@shared': fileURLToPath(new URL('../shared', import.meta.url)) },
+  },
   server: {
     port: 5174,
     proxy: { '/api': 'http://localhost:5055' },
+    fs: { allow: ['..'] },
   },
   build: { target: 'es2022' },
 });
