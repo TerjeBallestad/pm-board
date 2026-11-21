@@ -8,3 +8,4 @@ dist/
 *.user
 test-results/
 playwright-report/
+*.report.json
