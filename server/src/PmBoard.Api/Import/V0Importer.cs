@@ -111,6 +111,22 @@ public class V0Importer(BoardDb db)
             _report.NotRead.Add((string?)f ?? "");
         }
 
+        var attachments = new List<Attachment>();
+        foreach (var a in Array(dump, "attachments"))
+        {
+            var name = (string?)a["name"];
+            var data = (string?)a["data"];
+            if (name is null || data is null) continue;
+            attachments.Add(new Attachment
+            {
+                Id = Guid.CreateVersion7(),
+                BoardId = board.Id,
+                Name = name,
+                ContentType = Boards.FileRoutes.ImageType(name) ?? "application/octet-stream",
+                Data = Convert.FromBase64String(data),
+            });
+        }
+
         var counters = Counters(board.Id, _records.Select(r => r.Key).Concat(reserved));
         Renumber(counters);
         FindDanglingReferences();
@@ -120,6 +136,7 @@ public class V0Importer(BoardDb db)
         db.AddRange(_records);
         db.AddRange(_comments);
         db.AddRange(counters);
+        db.AddRange(attachments);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
@@ -127,6 +144,7 @@ public class V0Importer(BoardDb db)
         _report.Archived = _records.Count(r => r.ArchivedAt is not null);
         _report.Comments = _comments.Count(c => c.Kind == CommentKind.Comment);
         _report.ProgressNotes = _comments.Count(c => c.Kind == CommentKind.Progress);
+        _report.Attachments = attachments.Count;
         _report.Counters = counters.OrderBy(c => c.Prefix).ToDictionary(c => c.Prefix, c => c.NextNumber);
         return _report;
     }
@@ -271,6 +289,31 @@ public class V0Importer(BoardDb db)
             clash.Action = $"renumbered to {r.Key}";
             _byKey[r.Key] = r;
         }
+
+        // 0.x resolves a task's blockedBy among the tasks of its own plan, so in the plan of a
+        // renumbered task its old key means that task: follow it to the new key there.
+        var moved = _renumber
+            .Where(x => x.Record.Kind == RecordKind.Task)
+            .GroupBy(x => x.Record.ParentId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.Record.Fields.RootElement.GetProperty("v0Key").GetString()!, x => x));
+        foreach (var task in _records.Where(t => t.ParentId is { } p && moved.ContainsKey(p)))
+        {
+            var map = moved[task.ParentId!.Value];
+            if (!task.BlockedBy.Any(map.ContainsKey)) continue;
+            task.BlockedBy = task.BlockedBy.Select(b => map.TryGetValue(b, out var to) ? to.Record.Key : b).ToList();
+            var fields = JsonNode.Parse(task.Fields.RootElement.GetRawText())!.AsObject();
+            if (fields["blockedBy"] is JsonArray raw)
+            {
+                fields["blockedBy"] = new JsonArray(
+                    raw.Select(b => b?.GetValueKind() == JsonValueKind.String && map.TryGetValue((string)b!, out var to) ? (JsonNode)to.Record.Key : b?.DeepClone()).ToArray()
+                );
+                task.Fields = JsonDocument.Parse(fields.ToJsonString());
+            }
+            foreach (var (_, (r, clash)) in map.Where(kv => task.BlockedBy.Contains(kv.Value.Record.Key)))
+            {
+                clash.Action = $"renumbered to {r.Key}; the blockedBy of its plan's tasks follows it";
+            }
+        }
     }
 
     /// <summary>One more than the highest number of each prefix, counting clashes and skipped files.</summary>
@@ -378,4 +421,5 @@ public class ImportReport
     public List<Dangling> Dangling { get; } = [];
     public List<string> UnreadableTimes { get; } = [];
     public int SidecarTests { get; set; }
+    public int Attachments { get; set; }
 }

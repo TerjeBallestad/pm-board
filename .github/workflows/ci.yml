@@ -80,8 +80,39 @@ jobs:
           path: client/playwright-report/
           retention-days: 14
 
+  # tools/compare-write.mjs: one script of writes against 0.x (the npm package) and 1.x, compared
+  # after every step. It imports its fixture under a new slug and starts its own server.
+  golden-write:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: pm_board
+          POSTGRES_PASSWORD: pm_board
+          POSTGRES_DB: pm_board
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pm_board" --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - run: dotnet build server/PmBoard.slnx
+      - run: npm ci
+        working-directory: tools
+      - run: node tools/compare-write.mjs
+        env:
+          PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
+
   image:
-    needs: [server, client, e2e]
+    needs: [server, client, e2e, golden-write]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

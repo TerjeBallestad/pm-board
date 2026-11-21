@@ -17,8 +17,10 @@ server/   ASP.NET Core 10 minimal API, EF Core on Postgres (PmBoard.slnx)
 client/   Vite + React + TypeScript dashboard, built into the API's wwwroot
 ```
 
-`cli/` (the 1.x thin client) and `shared/` (the glossary) come in later tasks. `tools/` holds
-`export-v0.mjs`, which reads a 0.x board with the 0.x store for the importer.
+`cli/` (the 1.x thin client) comes in a later task. `shared/` holds the glossary and the
+knowledge-base append for prompts (DD-017). `tools/` holds `export-v0.mjs`, which reads a 0.x board
+with the 0.x store for the importer, and the golden checks `compare-read.mjs` and
+`compare-write.mjs`.
 
 ## Develop
 
@@ -61,7 +63,20 @@ node tools/compare-read.mjs ~/dev/time-turtle time-turtle http://localhost:5055 
 ```
 
 It asks 0.x (the 0.x code on a temp copy) and 1.x every read route, item by item, and compares the
-answers as data. The importer's own changes from the report are allowed.
+answers as data. It also compares next-task and context for every plan, explore and suggest for
+every project, and the prompt and review of every record. The importer's own changes from the
+report are allowed.
+
+To check the write API against 0.x, with a Postgres it may add a board to:
+
+```sh
+dotnet build server/PmBoard.slnx && (cd tools && npm install)
+PMB_PG=postgres://pm_board:pm_board@localhost:5432/pm_board node tools/compare-write.mjs
+```
+
+It runs one script of about 90 requests against 0.x (on a temp copy of
+`tools/fixtures/write-board`) and against 1.x (the same board imported under a new slug, on a
+server it starts), and compares each answer and then every read route after each step. CI runs it.
 
 ## Routes
 
@@ -71,6 +86,20 @@ answers as data. The importer's own changes from the report are allowed.
   `config`, `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
   `items/archived`, `items/{id}`, `designs`, `designs/{id}`, `plans`, `plans/{id}`, `sprints`,
   `sprints/{id}`, `milestones`, `milestones/{id}`.
+- Writes, per board, in 0.x's request and response shapes, with 0.x's error texts and status
+  codes: `items` (POST), `items/{id}` (PATCH, DELETE), `items/{id}/comments`, `items/{id}/claim`,
+  `items/{id}/release`, `items/archive`, `items/archive/sweep`; `designs` (POST), `designs/{id}`
+  (PATCH), `designs/{id}/comments`; `plans` (POST), `plans/{id}` (PATCH), `plans/{id}/tasks`
+  (POST), `plans/{id}/tasks/{taskId}` (PATCH), `plans/{id}/comments`; `sprints` (POST),
+  `sprints/{id}` (PATCH), `sprints/{id}/items`, `sprints/{id}/comments`, `sprints/{id}/suggest`,
+  `sprints/{id}/explore`; `context/prompt`, `context/review`. A PATCH with an unknown field is
+  400 (DD-016). Prompt and review list their knowledge-base queries in `qmdQueries` for the CLI
+  to run (DD-017). No auth yet: that is Task 7.
+- `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
+- `PUT /api/boards/{slug}/tests`: every sidecar tests list of the board, `{"tests": {"DD-003":
+  [...]}}`, for a repo's test catalogue tool (DD-019).
+- `POST /api/boards/{slug}/attachments?name=x.png` (the image is the body) and `GET` on the same
+  path for the list. `/attachments/<name>` serves the file, as in 0.x (DD-018).
 - `/api/boards/{slug}/events`: a server-sent event stream of changes, in 0.x's shape
   (`data: {"entity":"item","id":"SB-042","action":"update"}`). Postgres triggers send every change
   to a record or comment, from any writer, so the dashboard is never stale. A `resync` event asks

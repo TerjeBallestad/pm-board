@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "SDD-001",
+  "tests": [
+    {
+      "name": "design_test",
+      "file": "tests/design.test.js",
+      "summary": "Design holds",
+      "claims": []
+    }
+  ]
+}

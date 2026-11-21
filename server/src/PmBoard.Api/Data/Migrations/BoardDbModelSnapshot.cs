@@ -24,6 +24,51 @@ namespace PmBoard.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PmBoard.Api.Data.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_attachments");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_attachments_name");
+
+                    b.HasIndex("BoardId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_attachments_board_id_name");
+
+                    b.ToTable("attachments", (string)null);
+                });
+
             modelBuilder.Entity("PmBoard.Api.Data.Board", b =>
                 {
                     b.Property<Guid>("Id")
@@ -265,6 +310,16 @@ namespace PmBoard.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_records_task_has_parent", "(kind = 'task') = (parent_id IS NOT NULL)");
                         });
+                });
+
+            modelBuilder.Entity("PmBoard.Api.Data.Attachment", b =>
+                {
+                    b.HasOne("PmBoard.Api.Data.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_attachments_boards_board_id");
                 });
 
             modelBuilder.Entity("PmBoard.Api.Data.Comment", b =>

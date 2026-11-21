@@ -1,0 +1,30 @@
+{
+  "id": "PLAN-002",
+  "title": "Old plan with a label as a blocker",
+  "sddId": null,
+  "stage": "planned",
+  "sprintId": null,
+  "context": {
+    "setupNotes": "",
+    "relevantFiles": [],
+    "designDecisions": ""
+  },
+  "tasks": [
+    {
+      "description": "",
+      "steps": [],
+      "verification": "",
+      "blockedBy": [
+        "Task 9: something that is gone"
+      ],
+      "passes": false,
+      "status": "pending",
+      "progressNotes": [],
+      "id": "TASK-004",
+      "title": "Only task"
+    }
+  ],
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "updatedAt": "2026-01-01T10:00:00.000Z"
+}

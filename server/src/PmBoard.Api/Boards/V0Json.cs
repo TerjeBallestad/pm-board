@@ -33,7 +33,12 @@ public static class V0Json
         {
             Put(o, "priority", r.Priority);
         }
-        Put(o, "body", r.Body);
+        // Items and designs are markdown files in 0.x, and a blank body is not in the file: the next
+        // read has no body. Plans and sprints are JSON files and keep "".
+        if (r.Kind is RecordKind.Item or RecordKind.Design ? !string.IsNullOrWhiteSpace(r.Body) : r.Body is not null)
+        {
+            o["body"] = r.Body;
+        }
         if (r.Kind is RecordKind.Item or RecordKind.Task || r.BlockedBy.Count > 0)
         {
             o["blockedBy"] = new JsonArray(r.BlockedBy.Select(b => (JsonNode)b).ToArray());

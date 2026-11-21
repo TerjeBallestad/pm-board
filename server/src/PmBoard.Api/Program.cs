@@ -53,6 +53,7 @@ app.MapGet(
 );
 
 app.MapReadRoutes();
+app.MapWriteRoutes();
 app.MapEventRoutes();
 
 // An unknown API path is a 404, never the client's index.html.

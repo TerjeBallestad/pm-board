@@ -43,13 +43,20 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         return (reader, res);
     }
 
+    /// <summary>
+    /// The next event. The import's own create events can reach a stream opened right after it (the
+    /// listener gets them a moment after the commit), and no test here makes a record, so they are
+    /// passed over.
+    /// </summary>
     private static async Task<JsonNode> Next(StreamReader reader)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (true)
         {
             var line = await reader.ReadLineAsync(cts.Token);
-            if (line is not null && line.StartsWith("data: ")) return JsonNode.Parse(line["data: ".Length..])!;
+            if (line is null || !line.StartsWith("data: ")) continue;
+            var e = JsonNode.Parse(line["data: ".Length..])!;
+            if ((string?)e["action"] != "create") return e;
         }
     }
 

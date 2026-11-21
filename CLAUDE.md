@@ -22,7 +22,9 @@ server/   PmBoard.slnx: src/PmBoard.Api (minimal API, EF Core, Npgsql), tests/Pm
           docs/data-model.md: the schema and the mapping from 0.x. Keep it current.
 client/   Vite + React + TS dashboard on @terjeballestad/bob; e2e/ holds the Playwright tests
 shared/   glossary.js: 0.x's glossary module, unchanged, plain ESM (its test enforces that)
-tools/    export-v0.mjs, compare-read.mjs, v0-board.mjs: read 0.x boards with the 0.x code itself
+shared/   also knowledge-base.js: the CLI appends knowledge-base results to prompts with it (DD-017)
+tools/    export-v0.mjs, compare-read.mjs, compare-write.mjs, v0-board.mjs: read 0.x boards with the
+          0.x code itself; fixtures/write-board is compare-write's 0.x board
 ```
 
 ## Checks before you push
@@ -42,6 +44,14 @@ node --test shared/glossary.test.mjs
 # e2e: wipes the database you point it at, imports e2e/fixture.json, serves client/dist
 docker run -d --name pmb-e2e-pg -p 55433:5432 -e POSTGRES_USER=pm_board -e POSTGRES_PASSWORD=pm_board -e POSTGRES_DB=pm_board postgres:18
 cd client && E2E_PG=postgres://pm_board:pm_board@localhost:55433/pm_board npm run e2e
+```
+
+When you touch the write side, run the golden write check (CI runs it too): it adds a board to the
+database you give it and starts its own server.
+
+```sh
+dotnet build server/PmBoard.slnx && (cd tools && npm install)
+PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-write.mjs
 ```
 
 When you touch the read side (routes, V0Json, the importer), also run the golden check against the

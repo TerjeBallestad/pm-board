@@ -42,6 +42,27 @@ public static class KeyAllocator
         return (Format(prefix, number), number);
     }
 
+    /// <summary>
+    /// Marks a number as used, for a key that a client gave by hand (a plan's task list): the counter
+    /// moves past it and never gives it out. Inside the insert's transaction, as for NextAsync.
+    /// </summary>
+    public static async Task ReserveAsync(BoardDb db, Guid boardId, string prefix, int number, CancellationToken ct = default)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("Reserve a key inside the transaction that inserts the record");
+        }
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO id_counters (board_id, prefix, next_number)
+            VALUES ({boardId}, {prefix}, {number + 1})
+            ON CONFLICT (board_id, prefix)
+            DO UPDATE SET next_number = GREATEST(id_counters.next_number, EXCLUDED.next_number)
+            """,
+            ct
+        );
+    }
+
     /// <summary>The 0.x format: at least three digits. SB-007, SB-042, SB-1000.</summary>
     public static string Format(string prefix, int number) => $"{prefix}-{number:D3}";
 

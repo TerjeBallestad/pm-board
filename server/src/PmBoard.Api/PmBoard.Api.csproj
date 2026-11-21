@@ -15,4 +15,9 @@
     <PackageReference Include="Npgsql.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- 0.x's built-in prompt templates (pm-board-cli defaults/templates), unchanged. -->
+    <EmbeddedResource Include="Boards/Templates/*.md" LogicalName="templates.%(Filename).md" />
+  </ItemGroup>
 </Project>

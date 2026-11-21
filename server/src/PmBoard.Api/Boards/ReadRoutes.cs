@@ -120,12 +120,12 @@ public static class ReadRoutes
         g.MapGet("/milestones/{key}", (string slug, string key, BoardDb db) => One(db, slug, RecordKind.Milestone, key));
     }
 
-    private static IResult NotFound() => Results.Json(new { error = "Not found" }, statusCode: 404);
+    internal static IResult NotFound() => Results.Json(new { error = "Not found" }, statusCode: 404);
 
-    private static Task<Board?> Board(BoardDb db, string slug) =>
+    internal static Task<Board?> Board(BoardDb db, string slug) =>
         db.Boards.AsNoTracking().SingleOrDefaultAsync(p => p.Slug == slug);
 
-    private static IQueryable<Record> Live(BoardDb db, Board p, string kind) =>
+    internal static IQueryable<Record> Live(BoardDb db, Board p, string kind) =>
         db.Records.AsNoTracking().Where(r => r.BoardId == p.Id && r.Kind == kind && r.ArchivedAt == null);
 
     private static async Task<IResult> One(BoardDb db, string slug, string kind, string key)
@@ -136,7 +136,7 @@ public static class ReadRoutes
     }
 
     /// <summary>The 0.x JSON for each record, with its comments, and a plan's tasks in plan order.</summary>
-    private static async Task<JsonArray> Shape(BoardDb db, List<Record> records)
+    internal static async Task<JsonArray> Shape(BoardDb db, List<Record> records)
     {
         var ids = records.Select(r => r.Id).ToList();
         var tasks = await db.Records.AsNoTracking()
@@ -167,24 +167,11 @@ public static class ReadRoutes
     /// </summary>
     private static List<Record> Frontier(Board p, List<Record> items, List<Record> active, bool allClaims)
     {
-        var cfg = Config(p);
-        var nonFrontier = new HashSet<string>();
-        if (cfg["entityTypes"] is JsonObject types)
-        {
-            foreach (var (prefix, meta) in types)
-            {
-                if (meta?["frontier"]?.GetValueKind() == JsonValueKind.False)
-                {
-                    nonFrontier.Add(((string?)meta["label"] ?? prefix).ToLowerInvariant());
-                }
-            }
-        }
-        var ttl = cfg["claimTtlHours"]?.GetValue<double>() ?? 4;
+        var cfg = new BoardConfig(p);
+        var nonFrontier = cfg.NonFrontier();
         var byKey = active.ToDictionary(r => r.Key);
         var now = DateTimeOffset.UtcNow;
-
-        bool ClaimLive(Record r) =>
-            r.Assignee is not null && r.AssignedAt is { } at && (ttl <= 0 || now - at < TimeSpan.FromHours(ttl));
+        bool ClaimLive(Record r) => cfg.ClaimLive(r, now);
 
         return items
             .Where(r => r.Stage != "done")
@@ -197,15 +184,14 @@ public static class ReadRoutes
     /// <summary>0.x's /api/config: name, stages, entityTypes, commands, with 0.x's defaults where missing.</summary>
     public static JsonObject Config(Board p)
     {
-        var stored = JsonNode.Parse(p.Config.RootElement.GetRawText())!.AsObject();
-        var o = new JsonObject
+        var merged = new BoardConfig(p).Merged;
+        return new JsonObject
         {
             ["name"] = p.Name,
-            ["stages"] = stored["stages"]?.DeepClone() ?? new JsonArray("inbox", "exploring", "sdd", "planned", "done"),
-            ["entityTypes"] = stored["entityTypes"]?.DeepClone() ?? new JsonObject(),
-            ["commands"] = stored["commands"]?.DeepClone() ?? new JsonObject(),
-            ["claimTtlHours"] = stored["claimTtlHours"]?.DeepClone() ?? 4,
+            ["stages"] = merged["stages"]?.DeepClone(),
+            ["entityTypes"] = merged["entityTypes"]?.DeepClone(),
+            ["commands"] = merged["commands"]?.DeepClone() ?? new JsonObject(),
+            ["claimTtlHours"] = merged["claimTtlHours"]?.DeepClone(),
         };
-        return o;
     }
 }

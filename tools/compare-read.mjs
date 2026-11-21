@@ -24,7 +24,7 @@ const dropped = new Set();
 const renumbered = new Map();
 if (reportPath && existsSync(reportPath)) {
   for (const c of JSON.parse(readFileSync(reportPath, 'utf8')).Clashes) {
-    const to = /^renumbered to (.+)$/.exec(c.Action)?.[1];
+    const to = /^renumbered to ([^;]+)/.exec(c.Action)?.[1];
     if (to) renumbered.set(c.Key, [...(renumbered.get(c.Key) ?? []), to]);
     else dropped.add(c.Key);
   }
@@ -46,7 +46,7 @@ const empty = (v) => v === null || v === undefined || (Array.isArray(v) && v.len
 /** The first difference between a (0.x) and b (1.x), as a path, or null when they are the same. */
 function diff(a, b, path = '') {
   if (empty(a) && empty(b)) return null;
-  if (path.endsWith('.id') && renumbered.get(a)?.includes(b)) return null;
+  if ((path.endsWith('.id') || /blockedBy\[\d+\]$/.test(path)) && renumbered.get(a)?.includes(b)) return null;
   if (typeof a === 'string' && typeof b === 'string' && ISO.test(a) && ISO.test(b)) {
     return Date.parse(a) === Date.parse(b) ? null : { path, a, b };
   }
@@ -148,6 +148,54 @@ for (const [kind, list] of Object.entries(singles)) {
   }
   compareLists(`/${kind}/{id} one by one`, a, b);
 }
+
+// The routes that compute an answer from many records: per plan, per project, and the prompt and
+// review texts of every record that has one. explore and suggest are POST in 0.x but change nothing.
+async function computed(name, calls) {
+  let same = 0;
+  const diffs = [];
+  for (const [method, path, body] of calls) {
+    const a = await board.dispatch(method, '/api' + path, structuredClone(body));
+    const r = await fetch(`${base}/api/boards/${slug}${path}`, {
+      method,
+      headers: body ? { 'content-type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const b = { status: r.status, data: await r.json() };
+    // The knowledge base runs in the CLI (DD-017); 0.x's is switched off below for these.
+    if (b.data && typeof b.data === 'object') delete b.data.qmdQueries;
+    // A text that names a renumbered task has its new key where 0.x has the old one.
+    b.data = oldKeys(b.data);
+    const d = a.status !== b.status ? { path, a: a.status, b: b.status } : diff(a.data, b.data, path);
+    if (d) diffs.push(d);
+    else same++;
+  }
+  report(name, calls.length, diffs, same);
+}
+const back = new Map([...renumbered].flatMap(([old, tos]) => tos.map((to) => [to, old])));
+const backRe = back.size ? new RegExp(`\\b(${[...back.keys()].join('|')})\\b`, 'g') : null;
+function oldKeys(v) {
+  if (!backRe) return v;
+  if (typeof v === 'string') return v.replace(backRe, (k) => back.get(k));
+  if (Array.isArray(v)) return v.map(oldKeys);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, oldKeys(x)]));
+  return v;
+}
+const plans = singles.plans.map((p) => p.id).filter((id, i, all) => all.indexOf(id) === i);
+await computed('/plans/{id}/next-task and /context', plans.flatMap((id) => [['GET', `/plans/${id}/next-task`], ['GET', `/plans/${id}/context`]]));
+await computed('/sprints/{id}/explore and /suggest', singles.sprints.flatMap(({ id }) => [['POST', `/sprints/${id}/explore`, {}], ['POST', `/sprints/${id}/suggest`, {}]]));
+// 0.x runs the knowledge-base command for these: switch it off on the 0.x side.
+c0.knowledgeBase = { ...c0.knowledgeBase, command: null };
+const unique = (list) => list.map((x) => x.id).filter((id, i, all) => all.indexOf(id) === i && !renumbered.has(id) && !dropped.has(id));
+await computed('/context/prompt for every item, design and plan', [
+  ...unique(singles.items).map((id) => ['POST', '/context/prompt', { entityType: 'item', entityId: id }]),
+  ...unique(singles.designs).map((id) => ['POST', '/context/prompt', { entityType: 'sdd', entityId: id }]),
+  ...unique(singles.plans).map((id) => ['POST', '/context/prompt', { entityType: 'plan', entityId: id }]),
+]);
+await computed('/context/review for every design and plan', [
+  ...unique(singles.designs).map((id) => ['POST', '/context/review', { entityType: 'sdd', entityId: id }]),
+  ...unique(singles.plans).map((id) => ['POST', '/context/review', { entityType: 'plan', entityId: id }]),
+]);
 
 board.close();
 console.log(failures ? `${failures} differences` : 'no differences');

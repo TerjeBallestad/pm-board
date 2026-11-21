@@ -9,6 +9,7 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
     public DbSet<IdCounter> IdCounters => Set<IdCounter>();
     public DbSet<Record> Records => Set<Record>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -54,6 +55,14 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
             e.Property(c => c.Seq).UseIdentityAlwaysColumn();
             e.HasOne<Record>().WithMany().HasForeignKey(c => c.RecordId).OnDelete(DeleteBehavior.Restrict);
             e.ToTable(t => t.HasCheckConstraint("ck_comments_kind", "kind IN ('comment', 'progress')"));
+        });
+
+        b.Entity<Attachment>(e =>
+        {
+            e.HasIndex(a => new { a.BoardId, a.Name }).IsUnique();
+            e.HasIndex(a => a.Name);
+            e.HasOne<Board>().WithMany().HasForeignKey(a => a.BoardId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
         });
     }
 }

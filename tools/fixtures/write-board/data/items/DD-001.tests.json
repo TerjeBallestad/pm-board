@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "DD-001",
+  "tests": [
+    {
+      "name": "login_cookie_test",
+      "file": "tests/login.test.js",
+      "summary": "Login sets a cookie",
+      "claims": []
+    }
+  ]
+}

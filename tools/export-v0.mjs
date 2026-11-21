@@ -6,7 +6,7 @@
 //
 //   node export-v0.mjs <folder with pm.config.json> [--slug <slug>] > board.json
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, resolve } from 'node:path';
 import { openV0Board } from './v0-board.mjs';
 
 const args = process.argv.slice(2);
@@ -58,6 +58,28 @@ for (const col of ['items', 'designs']) {
 const config = getConfig();
 const keep = ['stages', 'entityTypes', 'claimTtlHours', 'commands', 'knowledgeBase', 'templates', 'frontend'];
 
+// A board's own prompt templates (config.templates, a folder of <name>.md). 0.x read them from the
+// repo; the server keeps them in the board's config, as templateFiles (DD-017).
+const templateFiles = {};
+if (config.templates) {
+  const dir = resolve(src, config.templates);
+  if (existsSync(dir)) {
+    for (const f of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
+      templateFiles[f.replace(/\.md$/, '')] = readFileSync(join(dir, f), 'utf8');
+    }
+  }
+}
+
+// Images that records link to: 0.x kept them in <dataDir>/../attachments (DD-018).
+const attachments = [];
+const attachmentsDir = join(resolve(src, rel), '..', 'attachments');
+if (existsSync(attachmentsDir)) {
+  for (const f of readdirSync(attachmentsDir).sort()) {
+    if (f.startsWith('.')) continue;
+    attachments.push({ name: f, data: readFileSync(join(attachmentsDir, f)).toString('base64') });
+  }
+}
+
 const dump = {
   format: 'pm-v0-export',
   exportedWith: version,
@@ -65,7 +87,10 @@ const dump = {
   board: {
     slug: slugArg ?? basename(src),
     name: config.name ?? basename(src),
-    config: Object.fromEntries(keep.filter((k) => k in config).map((k) => [k, config[k]])),
+    config: {
+      ...Object.fromEntries(keep.filter((k) => k in config).map((k) => [k, config[k]])),
+      ...(Object.keys(templateFiles).length ? { templateFiles } : {}),
+    },
   },
   items: data.items,
   designs: data.designs,
@@ -76,6 +101,7 @@ const dump = {
   quarantined,
   sidecarTests,
   notRead,
+  attachments,
 };
 
 board.close();

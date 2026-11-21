@@ -11,3 +11,4 @@ playwright-report/
 *.report.json
 # Points pm at the pm-board-cli board on this Mac (see CLAUDE.md). Not for the repo.
 pm.config.json
+!tools/fixtures/*/pm.config.json

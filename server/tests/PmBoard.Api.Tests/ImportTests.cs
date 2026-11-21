@@ -131,6 +131,38 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
     }
 
     [Fact]
+    public async Task A_renumbered_task_is_followed_by_the_blockers_in_its_own_plan_only()
+    {
+        var slug = Slug();
+        var dump = JsonNode.Parse(
+            $$"""
+            { "format": "pm-v0-export", "board": { "slug": "{{slug}}", "name": "R", "config": {} },
+              "items": [], "designs": [], "sprints": [], "milestones": [],
+              "plans": [
+                { "id": "PLAN-001", "title": "First", "tasks": [
+                  { "id": "TASK-001", "title": "One" },
+                  { "id": "TASK-002", "title": "Waits for its own TASK-001", "blockedBy": ["TASK-001"] } ] },
+                { "id": "PLAN-002", "title": "Second", "tasks": [
+                  { "id": "TASK-001", "title": "Another one" },
+                  { "id": "TASK-003", "title": "Waits for this plan's TASK-001", "blockedBy": ["TASK-001", "TASK-002"] } ] }
+              ],
+              "archive": { "items": [], "designs": [], "archivedAt": {} }, "quarantined": [], "notRead": [] }
+            """
+        )!;
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BoardDb>();
+        var report = await new V0Importer(db).ImportAsync(dump);
+        var tasks = await db.Records.Where(r => r.Kind == RecordKind.Task && db.Boards.Any(b => b.Id == r.BoardId && b.Slug == slug)).ToListAsync();
+
+        Assert.Equal(["TASK-001"], tasks.Single(t => t.Key == "TASK-002").BlockedBy);
+        Assert.Equal("TASK-004", tasks.Single(t => t.Title == "Another one").Key);
+        // 0.x resolved TASK-001 among PLAN-002's tasks: that is the renumbered one. TASK-002 is in no
+        // task of PLAN-002, so it stays as it was.
+        Assert.Equal(["TASK-004", "TASK-002"], tasks.Single(t => t.Key == "TASK-003").BlockedBy);
+        Assert.Contains(report.Clashes, c => c.Key == "TASK-001" && c.Action.StartsWith("renumbered to TASK-004; the blockedBy"));
+    }
+
+    [Fact]
     public async Task Two_different_records_with_one_key_are_both_kept_and_the_second_gets_a_new_key()
     {
         var (report, records, _, _) = await Import(Slug());

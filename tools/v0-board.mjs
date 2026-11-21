@@ -18,6 +18,10 @@ export async function openV0Board(folder) {
   const rel = relative(src, dataDir);
   // Hidden folders (the data dir's own .git) are not board data.
   cpSync(dataDir, join(work, rel), { recursive: true, filter: (f) => !basename(f).startsWith('.') || f === dataDir });
+  // A board's own prompt templates, which 0.x reads relative to pm.config.json.
+  if (rawConfig.templates && existsSync(resolve(src, rawConfig.templates))) {
+    cpSync(resolve(src, rawConfig.templates), join(work, rawConfig.templates), { recursive: true });
+  }
   process.env.PM_STATE_DIR = join(work, '.state');
 
   const require = createRequire(import.meta.url);

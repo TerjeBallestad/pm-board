@@ -1,0 +1,61 @@
+{
+  "id": "PLAN-001",
+  "title": "Login plan",
+  "sddId": "SDD-001",
+  "stage": "planned",
+  "sprintId": "SPRINT-001",
+  "context": {
+    "setupNotes": "Run the app locally.",
+    "relevantFiles": [
+      "src/login.js"
+    ],
+    "designDecisions": "DD-001: cookies. See also DD-002 and DD-001."
+  },
+  "tasks": [
+    {
+      "description": "Set the cookie",
+      "steps": [],
+      "verification": "login test",
+      "blockedBy": [],
+      "passes": true,
+      "status": "done",
+      "progressNotes": [
+        {
+          "text": "Done in abc123",
+          "timestamp": "2026-03-01T10:00:00.000Z"
+        }
+      ],
+      "id": "TASK-001",
+      "title": "Write the cookie code"
+    },
+    {
+      "description": "",
+      "steps": [],
+      "verification": "",
+      "blockedBy": [
+        "TASK-001"
+      ],
+      "passes": false,
+      "status": "pending",
+      "progressNotes": [],
+      "id": "TASK-002",
+      "title": "Check the timeout"
+    },
+    {
+      "description": "",
+      "steps": [],
+      "verification": "",
+      "blockedBy": [
+        "TASK-002"
+      ],
+      "passes": false,
+      "status": "pending",
+      "progressNotes": [],
+      "id": "TASK-003",
+      "title": "Ship it"
+    }
+  ],
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "updatedAt": "2026-03-01T10:00:00.000Z"
+}

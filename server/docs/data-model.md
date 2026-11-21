@@ -11,6 +11,7 @@ is what it is in 0.x, a SPRINT-NNN record inside a board.
 erDiagram
   boards ||--o{ id_counters : "numbers keys"
   boards ||--o{ records : holds
+  boards ||--o{ attachments : has
   records ||--o{ records : "plan has tasks"
   records ||--o{ comments : has
 
@@ -51,6 +52,14 @@ erDiagram
     timestamptz archived_at "null while on the board"
     jsonb fields "every other 0.x field, verbatim"
   }
+  attachments {
+    uuid id PK
+    uuid board_id FK
+    text name "0c4635b040a6.png; unique in the board"
+    text content_type
+    bytea data
+    timestamptz created_at
+  }
   comments {
     uuid id PK
     uuid record_id FK
@@ -62,7 +71,7 @@ erDiagram
   }
 ```
 
-Users and API tokens (DD-003) come with the write API in PLAN-001 Task 6, in their own migration.
+Users and API tokens (DD-003) come in PLAN-001 Task 7, in their own migration.
 
 ## Rules
 
@@ -84,6 +93,14 @@ Users and API tokens (DD-003) come with the write API in PLAN-001 Task 6, in the
 - **Archiving sets `archived_at`.** The record keeps its key, so the key is never reused.
 - **Comments are rows, not a JSON array.** Two writers who add a comment at the same moment then
   both succeed. A task's `progressNotes` are comments of kind `progress`.
+- **A write is one transaction, and locks what it changes.** Each write route reads the records it
+  changes with `FOR UPDATE` first. Two claims of one item take turns, so exactly one wins, and two
+  comments on one record get positions one after the other. A refused write (any 4xx) rolls back,
+  so its key numbers go back to the counter.
+- **A key given by hand moves the counter past it.** A plan's task list in PATCH may hold a key
+  that is not taken yet. The counter then never gives that number out (DD-016).
+- **Attachments are rows** (DD-018), and a board's own prompt templates are in `boards.config` as
+  `templateFiles` (DD-017).
 
 ## From 0.x
 
@@ -116,7 +133,9 @@ the board, counting live, archived and skipped records.
 - **Clashes**: two records with one key. Live records are read before archived ones, and plans in
   file order. If both copies are the same record (same kind, title and body, for example archived
   and then put back), only the first is kept. If they are different records, both are kept: the
-  second gets the next free number, and its 0.x key stays in `fields.v0Key`. The report has the
+  second gets the next free number, and its 0.x key stays in `fields.v0Key`. 0.x resolves a task's
+  `blockedBy` among the tasks of its own plan, so in the plan of a renumbered task, the other tasks'
+  `blockedBy` follow it to the new key. The report has the
   second copy in full either way. On the boards of 21 Nov 2026 this kept five tasks in
   lifelines-core-loop that had the same key as a task in another plan (TASK-212, TASK-711 to
   TASK-714), and one archived term in healthy-humans-godot (TERM-053, "Barrier").
@@ -125,6 +144,22 @@ the board, counting live, archived and skipped records.
 - **Dangling references**: keys in `blocked_by`, `sprint_key`, `related`, `itemIds` or `sddId`
   that match no record. Most of them are older tasks whose `blockedBy` holds a label ("Task 2",
   "Task 3: Add CameraRig ...") in place of a key. They are kept as they are.
+
+### How the write API keeps 0.x's shapes
+
+The write routes port the 0.x handlers line by line, with JavaScript's rules for what is truthy and
+what a value prints as (`Boards/Js.cs`). A few 0.x behaviours come from its files, not its code,
+and 1.x copies them:
+
+- Items and designs are markdown files in 0.x, and a blank body is not in the file. So a read gives
+  no `body` for a blank one, while the answer to the create or patch that set it has `body: ""`, as
+  0.x held it in memory. Plans and projects are JSON files and keep `""`.
+- A project (sprint) has no `updatedAt`. Completing one closes its open items with `doneAt` but no
+  `updatedAt`, and adding items to it leaves their `updatedAt` as it was.
+- Lists that build text (explore, suggest, prompt, review) take records in key order, the order of
+  0.x's sorted file names.
+
+What 1.x does differently on purpose is in DD-016 to DD-019.
 
 ### Known differences from 0.x output
 

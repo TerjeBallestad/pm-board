@@ -1,0 +1,7 @@
+{
+  "name": "Write fixture",
+  "dataDir": "data",
+  "templates": "templates",
+  "knowledgeBase": { "command": "echo kb:", "scope": null },
+  "commands": { "ticket": { "default": "Work {id}: {title}" } }
+}
