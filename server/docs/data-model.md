@@ -110,12 +110,18 @@ the project, counting live, archived and skipped records.
 
 ### What the importer reports
 
-- **Clashes**: two files with the same key, for example a key that is both live and archived. The
-  live copy is imported. The other copy is written to the report in full, for a person to decide.
+- **Clashes**: two records with one key. Live records are read before archived ones, and plans in
+  file order. If both copies are the same record (same kind, title and body, for example archived
+  and then put back), only the first is kept. If they are different records, both are kept: the
+  second gets the next free number, and its 0.x key stays in `fields.v0Key`. The report has the
+  second copy in full either way. On the boards of 21 Nov 2026 this kept five tasks in
+  lifelines-core-loop that had the same key as a task in another plan (TASK-212, TASK-711 to
+  TASK-714), and one archived term in healthy-humans-godot (TERM-053, "Barrier").
 - **Skipped files**: files that 0.x itself skips (a file whose name does not match its id, or that
   does not parse). Their number still counts for the counter, as in 0.x.
 - **Dangling references**: keys in `blocked_by`, `sprint_key`, `related`, `itemIds` or `sddId`
-  that match no record.
+  that match no record. Most of them are older tasks whose `blockedBy` holds a label ("Task 2",
+  "Task 3: Add CameraRig ...") in place of a key. They are kept as they are.
 
 ### Known differences from 0.x output
 

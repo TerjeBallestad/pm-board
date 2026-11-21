@@ -1,0 +1,9 @@
+{
+  "name": "@pm-board/tools",
+  "private": true,
+  "type": "module",
+  "description": "Moves 0.x boards into pm 1.x. export-v0.mjs reads a board with the 0.x store itself (DD-013).",
+  "dependencies": {
+    "@terjeballestad/pm-board-cli": "0.5.5"
+  }
+}

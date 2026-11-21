@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using PmBoard.Api.Data;
+using PmBoard.Api.Import;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,13 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<BoardDb>().Database.MigrateAsync();
+}
+
+// `dotnet PmBoard.Api.dll import <dump.json> ...` loads 0.x boards (tools/export-v0.mjs) and exits.
+if (args is ["import", .. var dumps])
+{
+    Environment.ExitCode = await ImportCommand.RunAsync(app.Services, dumps);
+    return;
 }
 
 app.UseDefaultFiles();

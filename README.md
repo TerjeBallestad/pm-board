@@ -16,7 +16,8 @@ server/   ASP.NET Core 10 minimal API, EF Core on Postgres (PmBoard.slnx)
 client/   Vite + React + TypeScript dashboard, built into the API's wwwroot
 ```
 
-`cli/` (the 1.x thin client) and `shared/` (the glossary) come in later tasks.
+`cli/` (the 1.x thin client) and `shared/` (the glossary) come in later tasks. `tools/` holds
+`export-v0.mjs`, which reads a 0.x board with the 0.x store for the importer.
 
 ## Develop
 
@@ -38,6 +39,19 @@ cd server && dotnet test
 The tests start their own Postgres through Testcontainers, so Docker must run. With Colima, set
 `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock` and
 `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`.
+
+## Import a 0.x board
+
+```sh
+cd tools && npm install
+node export-v0.mjs ~/dev/time-turtle > time-turtle.json        # reads a copy, never the repo
+cd ../server && ConnectionStrings__pmboard='...' \
+  dotnet run --project src/PmBoard.Api -- import ../tools/time-turtle.json
+```
+
+Each dump is one project and one transaction. A project that exists is refused. The report next to
+the dump lists clashes, skipped files, dangling references and times that did not parse. The rules
+are in `server/docs/data-model.md`.
 
 ## Routes
 
