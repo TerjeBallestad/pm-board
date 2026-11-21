@@ -18,14 +18,14 @@ namespace PmBoard.Api.Auth;
 public sealed class TokenAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, BoardDb db)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string Scheme = "Bearer";
+    public const string SchemeName = "Bearer";
 
     /// <summary>The token's row id, as a claim, for logs and for `token list`.</summary>
     public const string TokenIdClaim = "pm_token_id";
 
     public static void AddTokenAuth(IServiceCollection services)
     {
-        services.AddAuthentication(Scheme).AddScheme<AuthenticationSchemeOptions, TokenAuth>(Scheme, null);
+        services.AddAuthentication(SchemeName).AddScheme<AuthenticationSchemeOptions, TokenAuth>(SchemeName, null);
         services.AddAuthorization(o =>
             o.FallbackPolicy = new AuthorizationPolicyBuilder()
                 .RequireAssertion(ctx =>
@@ -61,9 +61,9 @@ public sealed class TokenAuth(IOptionsMonitor<AuthenticationSchemeOptions> optio
                 new Claim(ClaimTypes.Name, found.Name),
                 new Claim(TokenIdClaim, found.Id.ToString()),
             ],
-            Scheme
+            SchemeName
         );
-        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme));
+        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }
 
     /// <summary>401 with 0.x's error shape, and what to send.</summary>
@@ -71,7 +71,7 @@ public sealed class TokenAuth(IOptionsMonitor<AuthenticationSchemeOptions> optio
     {
         var failure = (await HandleAuthenticateOnceSafeAsync()).Failure?.Message;
         Response.StatusCode = StatusCodes.Status401Unauthorized;
-        Response.Headers.WWWAuthenticate = Scheme;
+        Response.Headers.WWWAuthenticate = SchemeName;
         await Response.WriteAsJsonAsync(
             new JsonObject
             {
