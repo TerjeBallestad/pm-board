@@ -2,7 +2,7 @@ namespace PmBoard.Api.Boards;
 
 /// <summary>
 /// Every 0.x write route (pm-board-cli lib/dispatch.js ROUTE_TABLE), per board, under
-/// /api/boards/{slug}. Each handler ports its 0.x handler; Task 7 puts auth in front of them.
+/// /api/boards/{slug}. Each handler ports its 0.x handler. Each needs a token (Auth/TokenAuth.cs).
 /// </summary>
 public static class WriteRoutes
 {

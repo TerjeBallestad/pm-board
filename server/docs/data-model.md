@@ -14,6 +14,7 @@ erDiagram
   boards ||--o{ attachments : has
   records ||--o{ records : "plan has tasks"
   records ||--o{ comments : has
+  users ||--o{ tokens : has
 
   boards {
     uuid id PK
@@ -69,9 +70,23 @@ erDiagram
     text text
     timestamptz created_at
   }
+  users {
+    uuid id PK
+    text name UK "terje; comments and claims record it (DD-020)"
+    timestamptz created_at
+  }
+  tokens {
+    uuid id PK
+    uuid user_id FK
+    text name "the machine: mac-mini"
+    bytea hash UK "SHA-256 of the token"
+    timestamptz created_at
+    timestamptz last_used_at
+    timestamptz revoked_at "null while it is valid"
+  }
 ```
 
-Users and API tokens (DD-003) come in PLAN-001 Task 7, in their own migration.
+Users and tokens are not per board: a token writes to every board (DD-003, DD-020).
 
 ## Rules
 
@@ -99,6 +114,9 @@ Users and API tokens (DD-003) come in PLAN-001 Task 7, in their own migration.
   so its key numbers go back to the counter.
 - **A key given by hand moves the counter past it.** A plan's task list in PATCH may hold a key
   that is not taken yet. The counter then never gives that number out (DD-016).
+- **Only a token's hash is stored.** A token is `pmb_` and 32 random bytes, so SHA-256 is enough:
+  it is not a password. A revoked token keeps its row, for `token list`. A user's tokens that are
+  not revoked have different names (a unique index with `WHERE revoked_at IS NULL`).
 - **Attachments are rows** (DD-018), and a board's own prompt templates are in `boards.config` as
   `templateFiles` (DD-017).
 

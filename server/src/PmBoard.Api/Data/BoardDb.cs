@@ -10,6 +10,8 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
     public DbSet<Record> Records => Set<Record>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Token> Tokens => Set<Token>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -63,6 +65,20 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
             e.HasIndex(a => a.Name);
             e.HasOne<Board>().WithMany().HasForeignKey(a => a.BoardId).OnDelete(DeleteBehavior.Restrict);
             e.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<User>(e =>
+        {
+            e.HasIndex(u => u.Name).IsUnique();
+            e.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<Token>(e =>
+        {
+            e.HasIndex(t => t.Hash).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.Name }).IsUnique().HasFilter("revoked_at IS NULL");
+            e.HasOne<User>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(t => t.CreatedAt).HasDefaultValueSql("now()");
         });
     }
 }

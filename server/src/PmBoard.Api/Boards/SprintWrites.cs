@@ -12,8 +12,10 @@ public static partial class SprintWrites
     public static void MapSprintWrites(this RouteGroupBuilder g)
     {
         g.MapPost("/sprints", (string slug, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, Create));
-        g.MapPost("/sprints/{key}/suggest", (string slug, string key, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, w => Suggest(w, key)));
-        g.MapPost("/sprints/{key}/explore", (string slug, string key, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, w => Explore(w, key)));
+        g.MapPost("/sprints/{key}/suggest", (string slug, string key, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, w => Suggest(w, key)))
+            .AllowAnonymous(); // changes nothing: a read (DD-020)
+        g.MapPost("/sprints/{key}/explore", (string slug, string key, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, w => Explore(w, key)))
+            .AllowAnonymous(); // changes nothing: a read (DD-020)
         g.MapPost("/sprints/{key}/items", (string slug, string key, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, w => AddItems(w, key)));
         g.MapPost(
             "/sprints/{key}/comments",

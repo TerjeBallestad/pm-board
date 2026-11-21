@@ -131,7 +131,8 @@ public static class ItemWrites
     {
         var r = await w.Lock(RecordKind.Item, key);
         if (r is null) return ReadRoutes.NotFound();
-        var assignee = w.Body["assignee"];
+        // With no assignee, the token's user, where 0.x refused (DD-020).
+        JsonNode? assignee = Js.Truthy(w.Body["assignee"]) ? w.Body["assignee"] : w.UserName;
         if (!Js.Truthy(assignee)) return Write.Error(400, "assignee required");
         if (r.Stage == "done") return Write.Error(409, $"{r.Key} is already done");
         // Refuse when someone else holds a live claim. Your own claim is refreshed; an expired one is free.

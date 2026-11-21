@@ -14,9 +14,13 @@ namespace PmBoard.Api.Tests;
 /// tests cover what one script in one process cannot show: writers at the same moment, rollbacks,
 /// and the routes 0.x had outside its dispatcher (sidecar tests, attachments).
 /// </summary>
-public class WriteTests(BoardFactory factory) : IClassFixture<BoardFactory>
+public class WriteTests(BoardFactory factory) : IClassFixture<BoardFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _http = factory.CreateClient();
+    private HttpClient _http = null!;
+
+    public async Task InitializeAsync() => _http = await factory.Writer();
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     private async Task<string> Board()
     {

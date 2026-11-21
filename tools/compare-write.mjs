@@ -8,8 +8,9 @@
 //   PMB_PG=postgres://user:pass@host:port/db node tools/compare-write.mjs [<fixture folder>] [--base <url>]
 //
 // It imports the fixture with `PmBoard.Api import` into PMB_PG (a new board each run, nothing is
-// wiped) and starts the server on a free port, unless --base points at one that uses the same
-// database. Build the server first (dotnet build server/PmBoard.slnx).
+// wiped), mints a token with `PmBoard.Api token create`, and starts the server on a free port,
+// unless --base points at one that uses the same database. Build the server first
+// (dotnet build server/PmBoard.slnx).
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -43,6 +44,11 @@ if (exp.status !== 0) throw new Error(`export failed: ${exp.stderr}`);
 writeFileSync(dumpPath, exp.stdout);
 const imp = spawnSync('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', project, '--', 'import', dumpPath], { env, encoding: 'utf8' });
 if (imp.status !== 0) throw new Error(`import failed: ${imp.stdout}\n${imp.stderr}`);
+// Writes need a token (DD-003). Its user is named "user": a comment with no author records the
+// token's user in 1.x, where 0.x wrote "user" (DD-020), so this name keeps the two sides equal.
+const mint = spawnSync('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', project, '--', 'token', 'create', '--user', 'user', '--name', slug], { env, encoding: 'utf8' });
+if (mint.status !== 0) throw new Error(`token create failed: ${mint.stdout}\n${mint.stderr}`);
+const token = mint.stdout.trim();
 
 let server = null;
 let base = baseArg;
@@ -83,7 +89,7 @@ async function v0(method, path, body) {
 async function v1(method, path, body) {
   const r = await fetch(`${base}/api/boards/${slug}${path}`, {
     method,
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await r.text();
@@ -212,7 +218,8 @@ const steps = [
   ['POST', '/items/SB-001/claim', { assignee: 'agent-a' }],
   ['POST', '/items/SB-001/claim', { assignee: 'agent-b' }],
   ['POST', '/items/SB-001/claim', { assignee: 'agent-a' }],
-  ['POST', '/items/SB-001/claim', {}],
+  // 0.x refuses a claim with no assignee. 1.x claims for the token's user, and agent-a holds this one (DD-020).
+  { differs: 'DD-020', step: ['POST', '/items/SB-001/claim', {}], v1: 409 },
   ['POST', '/items/SB-003/claim', { assignee: 'agent-b' }],
   ['POST', '/items/SB-004/claim', { assignee: 'agent-b' }],
   ['POST', '/items/SB-404/claim', { assignee: 'agent-b' }],

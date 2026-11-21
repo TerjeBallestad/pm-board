@@ -94,7 +94,7 @@ server it starts), and compares each answer and then every read route after each
   `sprints/{id}` (PATCH), `sprints/{id}/items`, `sprints/{id}/comments`, `sprints/{id}/suggest`,
   `sprints/{id}/explore`; `context/prompt`, `context/review`. A PATCH with an unknown field is
   400 (DD-016). Prompt and review list their knowledge-base queries in `qmdQueries` for the CLI
-  to run (DD-017). No auth yet: that is Task 7.
+  to run (DD-017). Each write needs a token (see Tokens).
 - `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
 - `PUT /api/boards/{slug}/tests`: every sidecar tests list of the board, `{"tests": {"DD-003":
   [...]}}`, for a repo's test catalogue tool (DD-019).
@@ -104,8 +104,43 @@ server it starts), and compares each answer and then every read route after each
   (`data: {"entity":"item","id":"SB-042","action":"update"}`). Postgres triggers send every change
   to a record or comment, from any writer, so the dashboard is never stale. A `resync` event asks
   the client to load the board again.
-- `/api/...`: an unknown API path is 404, never the client.
+- `/api/...`: an unknown API path is 404, never the client. A request that is not a GET needs a
+  token first, so there it is 401.
 - Any other path serves the client, so `/<slug>` opens that board.
+
+## Tokens
+
+Every request that is not a GET or HEAD needs `Authorization: Bearer <token>` (DD-003, DD-020).
+Without one, or with a wrong or revoked one, it gets 401 with `{"error": "..."}`. Reads need no
+token, so the read-only dashboard works as before. Four POST routes change nothing and need no
+token either: `sprints/{id}/suggest`, `sprints/{id}/explore`, `context/prompt` and
+`context/review`.
+
+Give each machine its own token, so you can revoke one without the others:
+
+```sh
+cd server && dotnet run --project src/PmBoard.Api -- token create --user terje --name mac-mini
+dotnet run --project src/PmBoard.Api -- token list
+dotnet run --project src/PmBoard.Api -- token revoke <id>      # the whole id from token list
+```
+
+`token create` makes the user when it is new and prints the token on stdout, once. The server
+keeps only its SHA-256 hash, so a lost token cannot be shown again: revoke it and make a new one.
+Logs go to stderr, so `TOKEN=$(... token create ...)` gets the token alone. A user's tokens that
+are not revoked must have different names.
+
+A comment with no `author` records the token's user, where 0.x wrote `user`. A claim with no
+`assignee` claims for the token's user, where 0.x refused it (DD-020).
+
+In the cluster, run the same command in the pod. It uses the pod's database:
+
+```sh
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token create --user terje --name mac-mini
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token list
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token revoke <id>
+```
+
+Put the token in the machine's pm config, not in a repo.
 
 ## Deploy
 

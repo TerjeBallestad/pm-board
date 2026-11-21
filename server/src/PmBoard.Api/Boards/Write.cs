@@ -22,6 +22,9 @@ public sealed class Write(BoardDb db, Board board, BoardConfig cfg, JsonObject b
     /// <summary>The request's time, to the millisecond, as 0.x wrote it.</summary>
     public DateTimeOffset Now { get; } = now;
 
+    /// <summary>The token's user (DD-003). Null only on a route that needs no token.</summary>
+    public string? UserName { get; init; }
+
     /// <summary>
     /// Runs a write in a transaction. A result below 400 commits; anything else rolls back, so a
     /// refused request changes nothing and gives its key numbers back.
@@ -43,7 +46,7 @@ public sealed class Write(BoardDb db, Board board, BoardConfig cfg, JsonObject b
         if (board is null) return ReadRoutes.NotFound();
 
         var now = DateTimeOffset.FromUnixTimeMilliseconds(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        var result = await work(new Write(db, board, new BoardConfig(board), body, now));
+        var result = await work(new Write(db, board, new BoardConfig(board), body, now) { UserName = req.HttpContext.User.Identity?.Name });
         if (result is IStatusCodeHttpResult { StatusCode: < 400 })
         {
             await db.SaveChangesAsync();
@@ -145,7 +148,9 @@ public sealed class Write(BoardDb db, Board board, BoardConfig cfg, JsonObject b
         var r = await Lock(kind, key);
         if (r is null) return ReadRoutes.NotFound();
         if (!Js.Truthy(Body["text"])) return Error(400, "text required");
-        var c = await AddComment(r, CommentKind.Comment, Js.Truthy(Body["author"]) ? Js.Text(Body["author"]) : "user", Js.Text(Body["text"])!);
+        // With no author, the token's user, where 0.x wrote "user" (DD-020).
+        var author = Js.Truthy(Body["author"]) ? Js.Text(Body["author"]) : UserName ?? "user";
+        var c = await AddComment(r, CommentKind.Comment, author, Js.Text(Body["text"])!);
         // 0.x sets updatedAt on every record but a sprint, which has none.
         if (touch) r.UpdatedAt = Now;
         await Save();

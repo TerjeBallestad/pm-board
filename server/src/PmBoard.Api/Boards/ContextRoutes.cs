@@ -15,8 +15,10 @@ public static partial class ContextRoutes
 {
     public static void MapContextRoutes(this RouteGroupBuilder g)
     {
-        g.MapPost("/context/prompt", (string slug, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, Prompt));
-        g.MapPost("/context/review", (string slug, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, Review));
+        g.MapPost("/context/prompt", (string slug, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, Prompt))
+            .AllowAnonymous(); // changes nothing: a read (DD-020)
+        g.MapPost("/context/review", (string slug, HttpRequest req, BoardDb db) => Write.Run(req, db, slug, Review))
+            .AllowAnonymous(); // changes nothing: a read (DD-020)
     }
 
     private static async Task<IResult> Prompt(Write w)

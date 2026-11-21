@@ -1,10 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Console;
 using Npgsql;
+using PmBoard.Api.Auth;
 using PmBoard.Api.Boards;
 using PmBoard.Api.Data;
 using PmBoard.Api.Import;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// The one-off commands (import, token) keep stdout for their own output: `token create` prints the
+// token there, so `TOKEN=$(... token create ...)` gets the token alone. Logs go to stderr.
+if (args is ["import" or "token", ..])
+{
+    builder.Services.Configure<ConsoleLoggerOptions>(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
+}
 
 var connectionString =
     builder.Configuration.GetConnectionString("pmboard")
@@ -14,6 +23,8 @@ builder.Services.AddNpgsqlDataSource(connectionString);
 builder.Services.AddDbContext<BoardDb>(o =>
     o.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
 );
+
+TokenAuth.AddTokenAuth(builder.Services);
 
 builder.Services.AddSingleton<BoardEvents>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<BoardEvents>());
@@ -32,8 +43,17 @@ if (args is ["import", .. var dumps])
     return;
 }
 
+// `dotnet PmBoard.Api.dll token create|list|revoke ...` manages personal access tokens and exits.
+if (args is ["token", .. var tokenArgs])
+{
+    Environment.ExitCode = await TokenCommand.RunAsync(app.Services, tokenArgs);
+    return;
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet(
     "/api/health",
