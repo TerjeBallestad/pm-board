@@ -1,13 +1,14 @@
 # pm board
 
-`pm` 1.x: one server that holds every project's board. Agents and people use the same `pm`
+`pm` 1.x: one server that holds every repo's board. Agents and people use the same `pm`
 commands as in 0.x, and the server is the only place that gives out ids, so two agents in two
 worktrees can never both make `SB-042`.
 
 The 0.x line, the local-first edition with files in each repo, lives in
 [pm-board-cli](https://github.com/TerjeBallestad/pm-board-cli).
 
-The plan and the decisions are on the pm board: project SPRINT-001, PLAN-001, DD-001 to DD-006.
+The plan and the decisions are on the pm board: project SPRINT-001, PLAN-001, DD-001 to DD-015. A **board** is one repo's
+whole board, at `/<slug>`. A **project** is a SPRINT-NNN record inside a board, as in 0.x.
 
 ## Layout
 
@@ -49,7 +50,7 @@ cd ../server && ConnectionStrings__pmboard='...' \
   dotnet run --project src/PmBoard.Api -- import ../tools/time-turtle.json
 ```
 
-Each dump is one project and one transaction. A project that exists is refused. The report next to
+Each dump is one board and one transaction. A board that exists is refused. The report next to
 the dump lists clashes, skipped files, dangling references and times that did not parse. The rules
 are in `server/docs/data-model.md`.
 
@@ -65,17 +66,17 @@ answers as data. The importer's own changes from the report are allowed.
 ## Routes
 
 - `/api/health`: `{"ok": true}` when Postgres answers, 503 when it does not.
-- `/api/projects`: every project, `{slug, name}`.
-- `/api/projects/{slug}/...`: 0.x's read routes for that project, with the same JSON and filters:
+- `/api/boards`: every board, `{slug, name}`.
+- `/api/boards/{slug}/...`: 0.x's read routes for that board, with the same JSON and filters:
   `config`, `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
   `items/archived`, `items/{id}`, `designs`, `designs/{id}`, `plans`, `plans/{id}`, `sprints`,
   `sprints/{id}`, `milestones`, `milestones/{id}`.
-- `/api/projects/{slug}/events`: a server-sent event stream of changes, in 0.x's shape
+- `/api/boards/{slug}/events`: a server-sent event stream of changes, in 0.x's shape
   (`data: {"entity":"item","id":"SB-042","action":"update"}`). Postgres triggers send every change
   to a record or comment, from any writer, so the dashboard is never stale. A `resync` event asks
   the client to load the board again.
 - `/api/...`: an unknown API path is 404, never the client.
-- Any other path serves the client, so `/<project>` opens that project's board.
+- Any other path serves the client, so `/<slug>` opens that board.
 
 ## Deploy
 

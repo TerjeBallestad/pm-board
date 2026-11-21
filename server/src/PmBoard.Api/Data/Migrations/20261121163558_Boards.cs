@@ -2,19 +2,20 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace PmBoard.Api.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddBoard : Migration
+    public partial class Boards : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "projects",
+                name: "boards",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -25,25 +26,25 @@ namespace PmBoard.Api.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_projects", x => x.id);
+                    table.PrimaryKey("pk_boards", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "id_counters",
                 columns: table => new
                 {
-                    project_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    board_id = table.Column<Guid>(type: "uuid", nullable: false),
                     prefix = table.Column<string>(type: "text", nullable: false),
                     next_number = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_id_counters", x => new { x.project_id, x.prefix });
+                    table.PrimaryKey("pk_id_counters", x => new { x.board_id, x.prefix });
                     table.CheckConstraint("ck_id_counters_next_number_positive", "next_number > 0");
                     table.ForeignKey(
-                        name: "fk_id_counters_projects_project_id",
-                        column: x => x.project_id,
-                        principalTable: "projects",
+                        name: "fk_id_counters_boards_board_id",
+                        column: x => x.board_id,
+                        principalTable: "boards",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -53,7 +54,7 @@ namespace PmBoard.Api.Data.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    project_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    board_id = table.Column<Guid>(type: "uuid", nullable: false),
                     key = table.Column<string>(type: "text", nullable: false),
                     prefix = table.Column<string>(type: "text", nullable: true),
                     number = table.Column<int>(type: "integer", nullable: true),
@@ -83,9 +84,9 @@ namespace PmBoard.Api.Data.Migrations
                     table.CheckConstraint("ck_records_prefix_number", "(prefix IS NULL) = (number IS NULL)");
                     table.CheckConstraint("ck_records_task_has_parent", "(kind = 'task') = (parent_id IS NOT NULL)");
                     table.ForeignKey(
-                        name: "fk_records_projects_project_id",
-                        column: x => x.project_id,
-                        principalTable: "projects",
+                        name: "fk_records_boards_board_id",
+                        column: x => x.board_id,
+                        principalTable: "boards",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -101,6 +102,9 @@ namespace PmBoard.Api.Data.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    position = table.Column<int>(type: "integer", nullable: false),
+                    seq = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
                     record_id = table.Column<Guid>(type: "uuid", nullable: false),
                     kind = table.Column<string>(type: "text", nullable: false),
                     legacy_id = table.Column<string>(type: "text", nullable: true),
@@ -121,32 +125,32 @@ namespace PmBoard.Api.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "ix_boards_slug",
+                table: "boards",
+                column: "slug",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_comments_record_id",
                 table: "comments",
                 column: "record_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_projects_slug",
-                table: "projects",
-                column: "slug",
+                name: "ix_records_board_id_key",
+                table: "records",
+                columns: new[] { "board_id", "key" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_records_board_id_kind",
+                table: "records",
+                columns: new[] { "board_id", "kind" },
+                filter: "archived_at IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_records_parent_id",
                 table: "records",
                 column: "parent_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_records_project_id_key",
-                table: "records",
-                columns: new[] { "project_id", "key" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_records_project_id_kind",
-                table: "records",
-                columns: new[] { "project_id", "kind" },
-                filter: "archived_at IS NULL");
         }
 
         /// <inheritdoc />
@@ -162,7 +166,7 @@ namespace PmBoard.Api.Data.Migrations
                 name: "records");
 
             migrationBuilder.DropTable(
-                name: "projects");
+                name: "boards");
         }
     }
 }

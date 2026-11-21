@@ -16,12 +16,12 @@ public static class RecordKind
 
 /// <summary>
 /// Every keyed thing on a board: items, designs, plans, tasks, sprints and milestones (DD-010).
-/// The key is unique in the project across all kinds, live and archived.
+/// The key is unique in the board across all kinds, live and archived.
 /// </summary>
 public class Record
 {
     public Guid Id { get; set; }
-    public Guid ProjectId { get; set; }
+    public Guid BoardId { get; set; }
 
     /// <summary>SB-042. Never reused.</summary>
     public required string Key { get; set; }

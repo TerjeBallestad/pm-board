@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace PmBoard.Api.Data;
 
-public class Project
+public class Board
 {
     public Guid Id { get; set; }
 

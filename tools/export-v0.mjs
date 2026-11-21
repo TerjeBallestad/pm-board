@@ -62,7 +62,7 @@ const dump = {
   format: 'pm-v0-export',
   exportedWith: version,
   source: src,
-  project: {
+  board: {
     slug: slugArg ?? basename(src),
     name: config.name ?? basename(src),
     config: Object.fromEntries(keep.filter((k) => k in config).map((k) => [k, config[k]])),

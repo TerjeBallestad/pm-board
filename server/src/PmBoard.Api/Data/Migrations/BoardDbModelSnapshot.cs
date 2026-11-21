@@ -24,6 +24,44 @@ namespace PmBoard.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PmBoard.Api.Data.Board", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<JsonDocument>("Config")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("config");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.HasKey("Id")
+                        .HasName("pk_boards");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_boards_slug");
+
+                    b.ToTable("boards", (string)null);
+                });
+
             modelBuilder.Entity("PmBoard.Api.Data.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -82,9 +120,9 @@ namespace PmBoard.Api.Data.Migrations
 
             modelBuilder.Entity("PmBoard.Api.Data.IdCounter", b =>
                 {
-                    b.Property<Guid>("ProjectId")
+                    b.Property<Guid>("BoardId")
                         .HasColumnType("uuid")
-                        .HasColumnName("project_id");
+                        .HasColumnName("board_id");
 
                     b.Property<string>("Prefix")
                         .HasColumnType("text")
@@ -94,51 +132,13 @@ namespace PmBoard.Api.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("next_number");
 
-                    b.HasKey("ProjectId", "Prefix")
+                    b.HasKey("BoardId", "Prefix")
                         .HasName("pk_id_counters");
 
                     b.ToTable("id_counters", null, t =>
                         {
                             t.HasCheckConstraint("ck_id_counters_next_number_positive", "next_number > 0");
                         });
-                });
-
-            modelBuilder.Entity("PmBoard.Api.Data.Project", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<JsonDocument>("Config")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("config");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("slug");
-
-                    b.HasKey("Id")
-                        .HasName("pk_projects");
-
-                    b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("ix_projects_slug");
-
-                    b.ToTable("projects", (string)null);
                 });
 
             modelBuilder.Entity("PmBoard.Api.Data.Record", b =>
@@ -166,6 +166,10 @@ namespace PmBoard.Api.Data.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("blocked_by")
                         .HasDefaultValueSql("'{}'");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
 
                     b.Property<string>("Body")
                         .HasColumnType("text")
@@ -214,10 +218,6 @@ namespace PmBoard.Api.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("priority");
 
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_id");
-
                     b.Property<string>("SprintKey")
                         .HasColumnType("text")
                         .HasColumnName("sprint_key");
@@ -249,12 +249,12 @@ namespace PmBoard.Api.Data.Migrations
                     b.HasIndex("ParentId")
                         .HasDatabaseName("ix_records_parent_id");
 
-                    b.HasIndex("ProjectId", "Key")
+                    b.HasIndex("BoardId", "Key")
                         .IsUnique()
-                        .HasDatabaseName("ix_records_project_id_key");
+                        .HasDatabaseName("ix_records_board_id_key");
 
-                    b.HasIndex("ProjectId", "Kind")
-                        .HasDatabaseName("ix_records_project_id_kind")
+                    b.HasIndex("BoardId", "Kind")
+                        .HasDatabaseName("ix_records_board_id_kind")
                         .HasFilter("archived_at IS NULL");
 
                     b.ToTable("records", null, t =>
@@ -279,28 +279,28 @@ namespace PmBoard.Api.Data.Migrations
 
             modelBuilder.Entity("PmBoard.Api.Data.IdCounter", b =>
                 {
-                    b.HasOne("PmBoard.Api.Data.Project", null)
+                    b.HasOne("PmBoard.Api.Data.Board", null)
                         .WithMany()
-                        .HasForeignKey("ProjectId")
+                        .HasForeignKey("BoardId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_id_counters_projects_project_id");
+                        .HasConstraintName("fk_id_counters_boards_board_id");
                 });
 
             modelBuilder.Entity("PmBoard.Api.Data.Record", b =>
                 {
+                    b.HasOne("PmBoard.Api.Data.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_records_boards_board_id");
+
                     b.HasOne("PmBoard.Api.Data.Record", null)
                         .WithMany()
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_records_records_parent_id");
-
-                    b.HasOne("PmBoard.Api.Data.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_records_projects_project_id");
                 });
 #pragma warning restore 612, 618
         }

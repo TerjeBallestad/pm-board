@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using PmBoard.Api.Board;
+using PmBoard.Api.Boards;
 using PmBoard.Api.Data;
 using PmBoard.Api.Import;
 
@@ -59,7 +59,7 @@ app.MapEventRoutes();
 app.Map("/api/{**rest}", () => Results.NotFound());
 
 // Every other path without a file extension is a client route, for example
-// /pm-board-cli for that project's board.
+// /pm-board-cli for that repo's board.
 app.MapFallbackToFile("index.html");
 
 app.Run();

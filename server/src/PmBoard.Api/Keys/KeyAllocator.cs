@@ -4,7 +4,7 @@ using PmBoard.Api.Data;
 namespace PmBoard.Api.Keys;
 
 /// <summary>
-/// Gives out the next key for a prefix in a project (DD-011). Call it inside the transaction that
+/// Gives out the next key for a prefix in a board (DD-011). Call it inside the transaction that
 /// inserts the record: the counter row stays locked until that transaction ends, so a second
 /// writer for the same prefix waits, and a rollback gives the number back.
 /// </summary>
@@ -12,7 +12,7 @@ public static class KeyAllocator
 {
     public static async Task<(string Key, int Number)> NextAsync(
         BoardDb db,
-        Guid projectId,
+        Guid boardId,
         string prefix,
         CancellationToken ct = default
     )
@@ -28,9 +28,9 @@ public static class KeyAllocator
         var rows = await db
             .Database.SqlQuery<int>(
                 $"""
-                INSERT INTO id_counters (project_id, prefix, next_number)
-                VALUES ({projectId}, {prefix}, 2)
-                ON CONFLICT (project_id, prefix)
+                INSERT INTO id_counters (board_id, prefix, next_number)
+                VALUES ({boardId}, {prefix}, 2)
+                ON CONFLICT (board_id, prefix)
                 DO UPDATE SET next_number = id_counters.next_number + 1
                 RETURNING next_number - 1 AS "Value"
                 """

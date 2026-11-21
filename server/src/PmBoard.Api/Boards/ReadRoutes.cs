@@ -3,35 +3,35 @@ using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using PmBoard.Api.Data;
 
-namespace PmBoard.Api.Board;
+namespace PmBoard.Api.Boards;
 
 /// <summary>
-/// The read side of the 0.x API, per project: /api/projects/{slug}/items is 0.x's /api/items for that
-/// project, with the same filters and the same JSON (V0Json).
+/// The read side of the 0.x API, per board: /api/boards/{slug}/items is 0.x's /api/items for that
+/// board, with the same filters and the same JSON (V0Json).
 /// </summary>
 public static class ReadRoutes
 {
     public static void MapReadRoutes(this WebApplication app)
     {
         app.MapGet(
-            "/api/projects",
+            "/api/boards",
             async (BoardDb db) =>
-                await db.Projects.OrderBy(p => p.Slug).Select(p => new { slug = p.Slug, name = p.Name }).ToListAsync()
+                await db.Boards.OrderBy(p => p.Slug).Select(p => new { slug = p.Slug, name = p.Name }).ToListAsync()
         );
 
-        var g = app.MapGroup("/api/projects/{slug}");
+        var g = app.MapGroup("/api/boards/{slug}");
 
         g.MapGet(
             "/config",
             async (string slug, BoardDb db) =>
-                await Project(db, slug) is { } p ? Results.Json(Config(p)) : NotFound()
+                await Board(db, slug) is { } p ? Results.Json(Config(p)) : NotFound()
         );
 
         g.MapGet(
             "/items",
             async (string slug, BoardDb db, string? type, string? stage, string? priority, string? sprintId, string? frontier, string? allClaims) =>
             {
-                if (await Project(db, slug) is not { } p) return NotFound();
+                if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Item);
                 if (type is not null) q = q.Where(r => r.Type == type);
                 if (stage is not null) q = q.Where(r => r.Stage == stage);
@@ -50,8 +50,8 @@ public static class ReadRoutes
             "/items/archived",
             async (string slug, BoardDb db, string? type) =>
             {
-                if (await Project(db, slug) is not { } p) return NotFound();
-                var q = db.Records.Where(r => r.ProjectId == p.Id && r.Kind == RecordKind.Item && r.ArchivedAt != null);
+                if (await Board(db, slug) is not { } p) return NotFound();
+                var q = db.Records.Where(r => r.BoardId == p.Id && r.Kind == RecordKind.Item && r.ArchivedAt != null);
                 if (type is not null) q = q.Where(r => r.Type == type);
                 return Results.Json(await Shape(db, await q.OrderBy(r => r.Key).ToListAsync()));
             }
@@ -63,7 +63,7 @@ public static class ReadRoutes
             "/designs",
             async (string slug, BoardDb db, string? sprintId) =>
             {
-                if (await Project(db, slug) is not { } p) return NotFound();
+                if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Design);
                 if (sprintId is not null) q = q.Where(r => r.SprintKey == sprintId);
                 return Results.Json(await Shape(db, await q.OrderBy(r => r.Key).ToListAsync()));
@@ -75,7 +75,7 @@ public static class ReadRoutes
             "/plans",
             async (string slug, BoardDb db, string? sprintId) =>
             {
-                if (await Project(db, slug) is not { } p) return NotFound();
+                if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Plan);
                 if (sprintId is not null) q = q.Where(r => r.SprintKey == sprintId);
                 return Results.Json(await Shape(db, await q.OrderBy(r => r.Key).ToListAsync()));
@@ -86,7 +86,7 @@ public static class ReadRoutes
         g.MapGet(
             "/sprints",
             async (string slug, BoardDb db) =>
-                await Project(db, slug) is { } p
+                await Board(db, slug) is { } p
                     ? Results.Json(await Shape(db, await Live(db, p, RecordKind.Sprint).OrderBy(r => r.Key).ToListAsync()))
                     : NotFound()
         );
@@ -94,7 +94,7 @@ public static class ReadRoutes
             "/sprints/{key}",
             async (string slug, string key, BoardDb db) =>
             {
-                if (await Project(db, slug) is not { } p) return NotFound();
+                if (await Board(db, slug) is not { } p) return NotFound();
                 var sprint = await Live(db, p, RecordKind.Sprint).SingleOrDefaultAsync(r => r.Key == key);
                 if (sprint is null) return NotFound();
                 var o = (await Shape(db, [sprint]))[0]!.AsObject();
@@ -113,7 +113,7 @@ public static class ReadRoutes
         g.MapGet(
             "/milestones",
             async (string slug, BoardDb db) =>
-                await Project(db, slug) is { } p
+                await Board(db, slug) is { } p
                     ? Results.Json(await Shape(db, await Live(db, p, RecordKind.Milestone).OrderBy(r => r.Key).ToListAsync()))
                     : NotFound()
         );
@@ -122,15 +122,15 @@ public static class ReadRoutes
 
     private static IResult NotFound() => Results.Json(new { error = "Not found" }, statusCode: 404);
 
-    private static Task<Project?> Project(BoardDb db, string slug) =>
-        db.Projects.AsNoTracking().SingleOrDefaultAsync(p => p.Slug == slug);
+    private static Task<Board?> Board(BoardDb db, string slug) =>
+        db.Boards.AsNoTracking().SingleOrDefaultAsync(p => p.Slug == slug);
 
-    private static IQueryable<Record> Live(BoardDb db, Project p, string kind) =>
-        db.Records.AsNoTracking().Where(r => r.ProjectId == p.Id && r.Kind == kind && r.ArchivedAt == null);
+    private static IQueryable<Record> Live(BoardDb db, Board p, string kind) =>
+        db.Records.AsNoTracking().Where(r => r.BoardId == p.Id && r.Kind == kind && r.ArchivedAt == null);
 
     private static async Task<IResult> One(BoardDb db, string slug, string kind, string key)
     {
-        if (await Project(db, slug) is not { } p) return NotFound();
+        if (await Board(db, slug) is not { } p) return NotFound();
         var r = await Live(db, p, kind).SingleOrDefaultAsync(x => x.Key == key);
         return r is null ? NotFound() : Results.Json((await Shape(db, [r]))[0]);
     }
@@ -165,7 +165,7 @@ public static class ReadRoutes
     /// 0.x's ?frontier=true: not done, not a non-frontier type (entityTypes.*.frontier = false), not
     /// live-claimed unless allClaims, and no blocker that is an active item not yet done.
     /// </summary>
-    private static List<Record> Frontier(Project p, List<Record> items, List<Record> active, bool allClaims)
+    private static List<Record> Frontier(Board p, List<Record> items, List<Record> active, bool allClaims)
     {
         var cfg = Config(p);
         var nonFrontier = new HashSet<string>();
@@ -195,7 +195,7 @@ public static class ReadRoutes
     }
 
     /// <summary>0.x's /api/config: name, stages, entityTypes, commands, with 0.x's defaults where missing.</summary>
-    public static JsonObject Config(Project p)
+    public static JsonObject Config(Board p)
     {
         var stored = JsonNode.Parse(p.Config.RootElement.GetRawText())!.AsObject();
         var o = new JsonObject

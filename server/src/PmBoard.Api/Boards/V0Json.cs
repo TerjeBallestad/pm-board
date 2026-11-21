@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using PmBoard.Api.Data;
 
-namespace PmBoard.Api.Board;
+namespace PmBoard.Api.Boards;
 
 /// <summary>
 /// Turns records back into the JSON that the 0.x API returned, so the dashboard and the CLI read the

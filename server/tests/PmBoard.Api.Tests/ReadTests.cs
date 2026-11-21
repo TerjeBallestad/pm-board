@@ -21,7 +21,7 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
             $$"""
             {
               "format": "pm-v0-export",
-              "project": { "slug": "{{slug}}", "name": "Read test",
+              "board": { "slug": "{{slug}}", "name": "Read test",
                 "config": { "stages": ["inbox", "done"], "claimTtlHours": 4,
                   "entityTypes": { "SB": { "label": "Issue" }, "TERM": { "label": "Term", "frontier": false } } } },
               "items": [
@@ -68,7 +68,7 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
     public async Task An_item_comes_back_in_its_0x_shape()
     {
         var slug = await Board();
-        var sb1 = await Get($"/api/projects/{slug}/items/SB-001");
+        var sb1 = await Get($"/api/boards/{slug}/items/SB-001");
         Assert.Equal("SB-001", (string)sb1["id"]!);
         Assert.Equal("issue", (string)sb1["type"]!);
         Assert.Equal("core", (string)sb1["pillar"]!);
@@ -81,7 +81,7 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
     public async Task Comments_keep_their_0x_order_even_when_their_times_do_not()
     {
         var slug = await Board();
-        var sb1 = await Get($"/api/projects/{slug}/items/SB-001");
+        var sb1 = await Get($"/api/boards/{slug}/items/SB-001");
         Assert.Equal(["c2", "c1"], sb1["comments"]!.AsArray().Select(c => (string)c!["id"]!));
     }
 
@@ -89,19 +89,19 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
     public async Task The_frontier_leaves_out_done_blocked_claimed_and_non_frontier_items()
     {
         var slug = await Board();
-        Assert.Equal(["SB-001", "SB-003"], Ids(await Get($"/api/projects/{slug}/items?frontier=true")));
-        Assert.Equal(["SB-001", "SB-003", "SB-005"], Ids(await Get($"/api/projects/{slug}/items?frontier=true&allClaims=true")));
+        Assert.Equal(["SB-001", "SB-003"], Ids(await Get($"/api/boards/{slug}/items?frontier=true")));
+        Assert.Equal(["SB-001", "SB-003", "SB-005"], Ids(await Get($"/api/boards/{slug}/items?frontier=true&allClaims=true")));
     }
 
     [Fact]
     public async Task Archived_items_are_only_on_the_archived_list()
     {
         var slug = await Board();
-        Assert.DoesNotContain("SB-009", Ids(await Get($"/api/projects/{slug}/items")));
-        var archived = await Get($"/api/projects/{slug}/items/archived");
+        Assert.DoesNotContain("SB-009", Ids(await Get($"/api/boards/{slug}/items")));
+        var archived = await Get($"/api/boards/{slug}/items/archived");
         Assert.Equal(["SB-009"], Ids(archived));
         Assert.Equal("2026-02-01T00:00:00.000Z", (string)archived[0]!["archivedAt"]!);
-        var res = await factory.CreateClient().GetAsync($"/api/projects/{slug}/items/SB-009");
+        var res = await factory.CreateClient().GetAsync($"/api/boards/{slug}/items/SB-009");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
@@ -109,7 +109,7 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
     public async Task A_plan_has_its_tasks_in_order_with_progress_notes_and_original_blockers()
     {
         var slug = await Board();
-        var plan = await Get($"/api/projects/{slug}/plans/PLAN-001");
+        var plan = await Get($"/api/boards/{slug}/plans/PLAN-001");
         var tasks = plan["tasks"]!.AsArray();
         Assert.Equal(["TASK-001", "TASK-002"], Ids(tasks));
         Assert.Equal("n1", (string)tasks[0]!["progressNotes"]![0]!["text"]!);
@@ -120,27 +120,27 @@ public class ReadTests(BoardFactory factory) : IClassFixture<BoardFactory>
     public async Task Designs_carry_their_sidecar_tests_except_inside_a_sprint_as_in_0x()
     {
         var slug = await Board();
-        Assert.Equal("t1", (string)(await Get($"/api/projects/{slug}/designs/SDD-001"))["tests"]![0]!["name"]!);
-        var sprint = await Get($"/api/projects/{slug}/sprints/SPRINT-001");
+        Assert.Equal("t1", (string)(await Get($"/api/boards/{slug}/designs/SDD-001"))["tests"]![0]!["name"]!);
+        var sprint = await Get($"/api/boards/{slug}/sprints/SPRINT-001");
         Assert.Equal("Sprint", (string)sprint["name"]!);
         Assert.Equal(["SB-004"], Ids(sprint["items"]!));
         Assert.Null(sprint["designs"]![0]!["tests"]);
     }
 
     [Fact]
-    public async Task The_project_list_and_config_include_the_imported_project()
+    public async Task The_board_list_and_config_include_the_imported_board()
     {
         var slug = await Board();
-        Assert.Contains(slug, (await Get("/api/projects")).AsArray().Select(p => (string)p!["slug"]!));
-        var cfg = await Get($"/api/projects/{slug}/config");
+        Assert.Contains(slug, (await Get("/api/boards")).AsArray().Select(p => (string)p!["slug"]!));
+        var cfg = await Get($"/api/boards/{slug}/config");
         Assert.Equal("Read test", (string)cfg["name"]!);
         Assert.Equal("[\"inbox\",\"done\"]", cfg["stages"]!.ToJsonString());
     }
 
     [Theory]
-    [InlineData("/api/projects/no-such-project/items")]
-    [InlineData("/api/projects/no-such-project/config")]
-    public async Task An_unknown_project_is_404(string path)
+    [InlineData("/api/boards/no-such-board/items")]
+    [InlineData("/api/boards/no-such-board/config")]
+    public async Task An_unknown_board_is_404(string path)
     {
         var res = await factory.CreateClient().GetAsync(path);
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);

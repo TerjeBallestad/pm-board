@@ -36,34 +36,34 @@ public class V0Importer(BoardDb db)
             throw new ImportException("not a tools/export-v0.mjs dump (format is not pm-v0-export)");
         }
 
-        var p = dump["project"] ?? throw new ImportException("the dump has no project");
-        var slug = (string?)p["slug"] ?? throw new ImportException("the dump's project has no slug");
-        if (await db.Projects.AnyAsync(x => x.Slug == slug, ct))
+        var p = dump["board"] ?? throw new ImportException("the dump has no board");
+        var slug = (string?)p["slug"] ?? throw new ImportException("the dump's board has no slug");
+        if (await db.Boards.AnyAsync(x => x.Slug == slug, ct))
         {
-            throw new ImportException($"project {slug} already exists; nothing was imported");
+            throw new ImportException($"board {slug} already exists; nothing was imported");
         }
 
-        var project = new Project
+        var board = new Board
         {
             Id = Guid.CreateVersion7(),
             Slug = slug,
             Name = (string?)p["name"] ?? slug,
             Config = JsonDocument.Parse(p["config"]?.ToJsonString() ?? "{}"),
         };
-        _report.Project = slug;
+        _report.Board = slug;
 
         // Live records first, so on a clash the live copy wins and the archived copy is reported.
-        foreach (var e in Array(dump, "items")) Add(project, RecordKind.Item, e, archivedAt: null);
-        foreach (var e in Array(dump, "designs")) Add(project, RecordKind.Design, e, archivedAt: null);
-        foreach (var e in Array(dump, "sprints")) Add(project, RecordKind.Sprint, e, archivedAt: null);
-        foreach (var e in Array(dump, "milestones")) Add(project, RecordKind.Milestone, e, archivedAt: null);
+        foreach (var e in Array(dump, "items")) Add(board, RecordKind.Item, e, archivedAt: null);
+        foreach (var e in Array(dump, "designs")) Add(board, RecordKind.Design, e, archivedAt: null);
+        foreach (var e in Array(dump, "sprints")) Add(board, RecordKind.Sprint, e, archivedAt: null);
+        foreach (var e in Array(dump, "milestones")) Add(board, RecordKind.Milestone, e, archivedAt: null);
         foreach (var e in Array(dump, "plans"))
         {
-            var plan = Add(project, RecordKind.Plan, e, archivedAt: null);
+            var plan = Add(board, RecordKind.Plan, e, archivedAt: null);
             var position = 0;
             foreach (var t in e["tasks"]?.AsArray().OfType<JsonObject>() ?? [])
             {
-                var task = Add(project, RecordKind.Task, t, archivedAt: null, parent: plan);
+                var task = Add(board, RecordKind.Task, t, archivedAt: null, parent: plan);
                 if (task is not null)
                 {
                     task.Position = position;
@@ -79,11 +79,11 @@ public class V0Importer(BoardDb db)
         {
             var key = (string?)e["id"];
             var at = Time(key is null ? null : archivedAtMap?[key]) ?? Time(e["archivedAt"]);
-            Add(project, RecordKind.Item, e, archivedAt: at ?? DateTimeOffset.UnixEpoch);
+            Add(board, RecordKind.Item, e, archivedAt: at ?? DateTimeOffset.UnixEpoch);
         }
         foreach (var e in Array(archive, "designs"))
         {
-            Add(project, RecordKind.Design, e, archivedAt: Time(e["archivedAt"]) ?? DateTimeOffset.UnixEpoch);
+            Add(board, RecordKind.Design, e, archivedAt: Time(e["archivedAt"]) ?? DateTimeOffset.UnixEpoch);
         }
 
         // `tests` from the *.tests.json sidecar files: 0.x merges them into the record when it reads it.
@@ -111,12 +111,12 @@ public class V0Importer(BoardDb db)
             _report.NotRead.Add((string?)f ?? "");
         }
 
-        var counters = Counters(project.Id, _records.Select(r => r.Key).Concat(reserved));
+        var counters = Counters(board.Id, _records.Select(r => r.Key).Concat(reserved));
         Renumber(counters);
         FindDanglingReferences();
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        db.Add(project);
+        db.Add(board);
         db.AddRange(_records);
         db.AddRange(_comments);
         db.AddRange(counters);
@@ -131,7 +131,7 @@ public class V0Importer(BoardDb db)
         return _report;
     }
 
-    private Record? Add(Project project, string kind, JsonObject e, DateTimeOffset? archivedAt, Record? parent = null)
+    private Record? Add(Board board, string kind, JsonObject e, DateTimeOffset? archivedAt, Record? parent = null)
     {
         var key = (string?)e["id"];
         if (string.IsNullOrWhiteSpace(key))
@@ -182,7 +182,7 @@ public class V0Importer(BoardDb db)
         var r = new Record
         {
             Id = Guid.CreateVersion7(),
-            ProjectId = project.Id,
+            BoardId = board.Id,
             Key = key,
             Prefix = prefix,
             Number = number,
@@ -274,7 +274,7 @@ public class V0Importer(BoardDb db)
     }
 
     /// <summary>One more than the highest number of each prefix, counting clashes and skipped files.</summary>
-    private static List<IdCounter> Counters(Guid projectId, IEnumerable<string> keys)
+    private static List<IdCounter> Counters(Guid boardId, IEnumerable<string> keys)
     {
         var max = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var key in keys)
@@ -283,7 +283,7 @@ public class V0Importer(BoardDb db)
             if (prefix is null || number is null) continue;
             max[prefix] = Math.Max(max.GetValueOrDefault(prefix), number.Value);
         }
-        return max.Select(kv => new IdCounter { ProjectId = projectId, Prefix = kv.Key, NextNumber = kv.Value + 1 }).ToList();
+        return max.Select(kv => new IdCounter { BoardId = boardId, Prefix = kv.Key, NextNumber = kv.Value + 1 }).ToList();
     }
 
     private void FindDanglingReferences()
@@ -366,7 +366,7 @@ public record Dangling(string From, string Field, string To);
 
 public class ImportReport
 {
-    public string Project { get; set; } = "";
+    public string Board { get; set; } = "";
     public Dictionary<string, int> Records { get; set; } = [];
     public int Archived { get; set; }
     public int Comments { get; set; }

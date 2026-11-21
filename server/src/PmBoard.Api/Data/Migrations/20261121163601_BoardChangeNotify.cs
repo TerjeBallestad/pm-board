@@ -6,7 +6,7 @@ namespace PmBoard.Api.Data.Migrations
 {
     /// <summary>
     /// Every change to a record or a comment sends a notification on the channel board_changes, as
-    /// {"project": uuid, "entity": "item", "id": "SB-042", "action": "update"}, the event 0.x sent to
+    /// {"board": uuid, "entity": "item", "id": "SB-042", "action": "update"}, the event 0.x sent to
     /// the dashboard. A task's change is its plan's update. The trigger catches every writer, also a
     /// fix made by hand in psql, so the dashboard never shows stale data.
     /// </summary>
@@ -16,7 +16,7 @@ namespace PmBoard.Api.Data.Migrations
         {
             migrationBuilder.Sql(
                 """
-                CREATE FUNCTION notify_board_change(p_project uuid, p_record records, p_action text)
+                CREATE FUNCTION notify_board_change(p_board uuid, p_record records, p_action text)
                 RETURNS void LANGUAGE plpgsql AS $$
                 DECLARE
                   v_entity text := p_record.kind;
@@ -32,20 +32,20 @@ namespace PmBoard.Api.Data.Migrations
                   END IF;
                   PERFORM pg_notify(
                     'board_changes',
-                    json_build_object('project', p_project, 'entity', v_entity, 'id', v_key, 'action', v_action)::text
+                    json_build_object('board', p_board, 'entity', v_entity, 'id', v_key, 'action', v_action)::text
                   );
                 END $$;
 
                 CREATE FUNCTION records_changed() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN
                   IF TG_OP = 'INSERT' THEN
-                    PERFORM notify_board_change(NEW.project_id, NEW, 'create');
+                    PERFORM notify_board_change(NEW.board_id, NEW, 'create');
                   ELSIF TG_OP = 'DELETE' THEN
-                    PERFORM notify_board_change(OLD.project_id, OLD, 'delete');
+                    PERFORM notify_board_change(OLD.board_id, OLD, 'delete');
                   ELSIF OLD.archived_at IS NULL AND NEW.archived_at IS NOT NULL THEN
-                    PERFORM notify_board_change(NEW.project_id, NEW, 'archive');
+                    PERFORM notify_board_change(NEW.board_id, NEW, 'archive');
                   ELSE
-                    PERFORM notify_board_change(NEW.project_id, NEW, 'update');
+                    PERFORM notify_board_change(NEW.board_id, NEW, 'update');
                   END IF;
                   RETURN NULL;
                 END $$;
@@ -59,7 +59,7 @@ namespace PmBoard.Api.Data.Migrations
                 BEGIN
                   SELECT * INTO r FROM records WHERE id = COALESCE(NEW.record_id, OLD.record_id);
                   IF FOUND THEN
-                    PERFORM notify_board_change(r.project_id, r, 'update');
+                    PERFORM notify_board_change(r.board_id, r, 'update');
                   END IF;
                   RETURN NULL;
                 END $$;

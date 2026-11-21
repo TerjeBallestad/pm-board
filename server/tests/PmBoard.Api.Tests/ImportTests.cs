@@ -16,7 +16,7 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
             $$"""
             {
               "format": "pm-v0-export",
-              "project": { "slug": "{{slug}}", "name": "Fixture", "config": { "stages": ["inbox", "done"] } },
+              "board": { "slug": "{{slug}}", "name": "Fixture", "config": { "stages": ["inbox", "done"] } },
               "items": [
                 { "id": "SB-001", "type": "issue", "title": "Live", "stage": "inbox", "priority": "high",
                   "pillar": "core", "related": ["DD-001", "SB-404"], "affectedFiles": ["a.js"], "blockedBy": ["SB-002"],
@@ -59,11 +59,11 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BoardDb>();
         var report = await new V0Importer(db).ImportAsync(Dump(slug));
-        var project = await db.Projects.SingleAsync(p => p.Slug == slug);
-        var records = await db.Records.Where(r => r.ProjectId == project.Id).ToListAsync();
+        var board = await db.Boards.SingleAsync(p => p.Slug == slug);
+        var records = await db.Records.Where(r => r.BoardId == board.Id).ToListAsync();
         var ids = records.Select(r => r.Id).ToList();
         var comments = await db.Comments.Where(c => ids.Contains(c.RecordId)).ToListAsync();
-        var counters = await db.IdCounters.Where(c => c.ProjectId == project.Id).ToListAsync();
+        var counters = await db.IdCounters.Where(c => c.BoardId == board.Id).ToListAsync();
         return (report, records, comments, counters);
     }
 
@@ -167,9 +167,9 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
         await Import(slug);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BoardDb>();
-        var project = await db.Projects.SingleAsync(p => p.Slug == slug);
+        var board = await db.Boards.SingleAsync(p => p.Slug == slug);
         await using var tx = await db.Database.BeginTransactionAsync();
-        Assert.Equal("SB-021", (await KeyAllocator.NextAsync(db, project.Id, "SB")).Key);
+        Assert.Equal("SB-021", (await KeyAllocator.NextAsync(db, board.Id, "SB")).Key);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BoardDb>();
         await Assert.ThrowsAsync<ImportException>(() => new V0Importer(db).ImportAsync(Dump(slug)));
-        var project = await db.Projects.SingleAsync(p => p.Slug == slug);
-        Assert.Equal(before.Count, await db.Records.CountAsync(r => r.ProjectId == project.Id));
+        var board = await db.Boards.SingleAsync(p => p.Slug == slug);
+        Assert.Equal(before.Count, await db.Records.CountAsync(r => r.BoardId == board.Id));
     }
 }

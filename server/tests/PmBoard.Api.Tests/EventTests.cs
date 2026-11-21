@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PmBoard.Api.Board;
+using PmBoard.Api.Boards;
 using PmBoard.Api.Data;
 using PmBoard.Api.Import;
 
@@ -14,7 +14,7 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         var slug = "events-" + Guid.NewGuid().ToString("N")[..8];
         var dump = JsonNode.Parse(
             $$"""
-            { "format": "pm-v0-export", "project": { "slug": "{{slug}}", "name": "E", "config": {} },
+            { "format": "pm-v0-export", "board": { "slug": "{{slug}}", "name": "E", "config": {} },
               "items": [ { "id": "SB-001", "type": "issue", "title": "One", "stage": "inbox" } ],
               "designs": [], "sprints": [], "milestones": [],
               "plans": [ { "id": "PLAN-001", "title": "P", "tasks": [ { "id": "TASK-001", "title": "T", "status": "pending" } ] } ],
@@ -26,7 +26,7 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         return slug;
     }
 
-    /// <summary>Opens the project's event stream and returns a reader for its data lines.</summary>
+    /// <summary>Opens the board's event stream and returns a reader for its data lines.</summary>
     private async Task<(StreamReader Reader, HttpResponseMessage Res)> Open(string slug)
     {
         var events = factory.Services.GetRequiredService<BoardEvents>();
@@ -34,7 +34,7 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         Assert.True(events.Listening);
         var client = factory.CreateClient();
         var res = await client.SendAsync(
-            new HttpRequestMessage(HttpMethod.Get, $"/api/projects/{slug}/events"),
+            new HttpRequestMessage(HttpMethod.Get, $"/api/boards/{slug}/events"),
             HttpCompletionOption.ResponseHeadersRead
         );
         Assert.Equal("text/event-stream", res.Content.Headers.ContentType?.MediaType);
@@ -68,7 +68,7 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         var (reader, res) = await Open(slug);
         using (res)
         {
-            await Sql("UPDATE records SET title = 'Renamed' WHERE key = 'SB-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})", slug);
+            await Sql("UPDATE records SET title = 'Renamed' WHERE key = 'SB-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})", slug);
             Assert.Equal("item SB-001 update", Event(await Next(reader)));
         }
     }
@@ -80,9 +80,9 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         var (reader, res) = await Open(slug);
         using (res)
         {
-            await Sql("UPDATE records SET status = 'done' WHERE key = 'TASK-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})", slug);
+            await Sql("UPDATE records SET status = 'done' WHERE key = 'TASK-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})", slug);
             Assert.Equal("plan PLAN-001 update", Event(await Next(reader)));
-            await Sql("UPDATE records SET archived_at = now() WHERE key = 'SB-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})", slug);
+            await Sql("UPDATE records SET archived_at = now() WHERE key = 'SB-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})", slug);
             Assert.Equal("item SB-001 archive", Event(await Next(reader)));
         }
     }
@@ -95,7 +95,7 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
         using (res)
         {
             await Sql(
-                "INSERT INTO comments (id, record_id, kind, text, position) SELECT gen_random_uuid(), id, 'comment', 'hi', 0 FROM records WHERE key = 'SB-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})",
+                "INSERT INTO comments (id, record_id, kind, text, position) SELECT gen_random_uuid(), id, 'comment', 'hi', 0 FROM records WHERE key = 'SB-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})",
                 slug
             );
             Assert.Equal("item SB-001 update", Event(await Next(reader)));
@@ -103,23 +103,23 @@ public class EventTests(BoardFactory factory) : IClassFixture<BoardFactory>
     }
 
     [Fact]
-    public async Task A_stream_hears_only_its_own_project()
+    public async Task A_stream_hears_only_its_own_board()
     {
         var mine = await Board();
         var other = await Board();
         var (reader, res) = await Open(mine);
         using (res)
         {
-            await Sql("UPDATE records SET title = 'x' WHERE key = 'SB-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})", other);
-            await Sql("UPDATE records SET title = 'y' WHERE key = 'PLAN-001' AND project_id = (SELECT id FROM projects WHERE slug = {0})", mine);
+            await Sql("UPDATE records SET title = 'x' WHERE key = 'SB-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})", other);
+            await Sql("UPDATE records SET title = 'y' WHERE key = 'PLAN-001' AND board_id = (SELECT id FROM boards WHERE slug = {0})", mine);
             Assert.Equal("plan PLAN-001 update", Event(await Next(reader)));
         }
     }
 
     [Fact]
-    public async Task An_unknown_project_has_no_stream()
+    public async Task An_unknown_board_has_no_stream()
     {
-        var res = await factory.CreateClient().GetAsync("/api/projects/no-such-project/events");
+        var res = await factory.CreateClient().GetAsync("/api/boards/no-such-board/events");
         Assert.Equal(System.Net.HttpStatusCode.NotFound, res.StatusCode);
     }
 }

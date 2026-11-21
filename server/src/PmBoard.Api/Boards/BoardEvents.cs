@@ -5,14 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using PmBoard.Api.Data;
 
-namespace PmBoard.Api.Board;
+namespace PmBoard.Api.Boards;
 
 /// <summary>A change on a board, in 0.x's event shape: entity item|design|plan|sprint|milestone, the key, and the action.</summary>
-public record BoardEvent(Guid Project, string Entity, string Id, string Action);
+public record BoardEvent(Guid Board, string Entity, string Id, string Action);
 
 /// <summary>
 /// Listens on the Postgres channel board_changes (the triggers in migration BoardChangeNotify) and
-/// hands each change to the browsers that watch that project. One connection for the whole server.
+/// hands each change to the browsers that watch that board. One connection for the whole server.
 /// If it drops, it reconnects, and each watcher gets a "resync" so it loads the board again.
 /// </summary>
 public sealed class BoardEvents(NpgsqlDataSource dataSource, ILogger<BoardEvents> log) : BackgroundService
@@ -54,7 +54,7 @@ public sealed class BoardEvents(NpgsqlDataSource dataSource, ILogger<BoardEvents
                     try
                     {
                         var e = JsonSerializer.Deserialize<NotifyPayload>(n.Payload);
-                        if (e is not null) Publish(new BoardEvent(e.project, e.entity, e.id, e.action));
+                        if (e is not null) Publish(new BoardEvent(e.board, e.entity, e.id, e.action));
                     }
                     catch (JsonException ex)
                     {
@@ -90,7 +90,7 @@ public sealed class BoardEvents(NpgsqlDataSource dataSource, ILogger<BoardEvents
         }
     }
 
-    private sealed record NotifyPayload(Guid project, string entity, string id, string action);
+    private sealed record NotifyPayload(Guid board, string entity, string id, string action);
 }
 
 public static class EventRoutes
@@ -98,18 +98,18 @@ public static class EventRoutes
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// GET /api/projects/{slug}/events: a server-sent event stream with 0.x's payload,
+    /// GET /api/boards/{slug}/events: a server-sent event stream with 0.x's payload,
     /// data: {"entity":"item","id":"SB-042","action":"update"}. A "resync" event asks the client to load
     /// the whole board again. A comment line every 30 s keeps proxies from closing the stream.
     /// </summary>
     public static void MapEventRoutes(this WebApplication app)
     {
         app.MapGet(
-            "/api/projects/{slug}/events",
+            "/api/boards/{slug}/events",
             async (string slug, HttpContext http, BoardDb db, BoardEvents events) =>
             {
-                var project = await db.Projects.AsNoTracking().Where(p => p.Slug == slug).Select(p => (Guid?)p.Id).SingleOrDefaultAsync();
-                if (project is null)
+                var board = await db.Boards.AsNoTracking().Where(p => p.Slug == slug).Select(p => (Guid?)p.Id).SingleOrDefaultAsync();
+                if (board is null)
                 {
                     http.Response.StatusCode = 404;
                     return;
@@ -131,7 +131,7 @@ public static class EventRoutes
                         try
                         {
                             var e = await reader.ReadAsync(tick.Token);
-                            if (e.Project != project && e.Action != "resync") continue;
+                            if (e.Board != board && e.Action != "resync") continue;
                             line = "data: " + JsonSerializer.Serialize(new { entity = e.Entity, id = e.Id, action = e.Action }, Json) + "\n\n";
                         }
                         catch (OperationCanceledException) when (!ct.IsCancellationRequested)

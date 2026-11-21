@@ -36,7 +36,7 @@ async function v0(path) {
   return r.status === 200 ? r.data : { status: r.status };
 }
 async function v1(path) {
-  const r = await fetch(`${base}/api/projects/${slug}${path}`);
+  const r = await fetch(`${base}/api/boards/${slug}${path}`);
   return r.ok ? r.json() : { status: r.status };
 }
 

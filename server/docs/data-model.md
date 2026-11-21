@@ -1,17 +1,20 @@
 # Data model
 
-The Postgres model for pm 1.x. It holds every project's board in one database (DD-001, DD-002 on
-the pm-board-cli board). The decisions behind this shape are DD-010 to DD-014. This file holds
+The Postgres model for pm 1.x. It holds every repo's board in one database (DD-001, DD-002 on
+the pm-board-cli board). The decisions behind this shape are DD-010 to DD-015. This file holds
 only the shape and the mapping from 0.x.
+
+Two words (DD-015): a **board** is everything pm holds for one repo, at `/<slug>`. A **project**
+is what it is in 0.x, a SPRINT-NNN record inside a board.
 
 ```mermaid
 erDiagram
-  projects ||--o{ id_counters : "numbers keys"
-  projects ||--o{ records : holds
+  boards ||--o{ id_counters : "numbers keys"
+  boards ||--o{ records : holds
   records ||--o{ records : "plan has tasks"
   records ||--o{ comments : has
 
-  projects {
+  boards {
     uuid id PK
     text slug UK "the URL part: /pm-board-cli"
     text name
@@ -19,14 +22,14 @@ erDiagram
     timestamptz created_at
   }
   id_counters {
-    uuid project_id PK
+    uuid board_id PK
     text prefix PK "SB, DD, PLAN, TASK, ..."
     int next_number "the number the next key gets"
   }
   records {
     uuid id PK
-    uuid project_id FK
-    text key "SB-042; unique in the project, never reused"
+    uuid board_id FK
+    text key "SB-042; unique in the board, never reused"
     text prefix "SB; null for a key with no number"
     int number "42; null for SDD-flow-resonance or v0.1"
     text kind "item, design, plan, task, sprint, milestone"
@@ -63,11 +66,11 @@ Users and API tokens (DD-003) come with the write API in PLAN-001 Task 6, in the
 
 ## Rules
 
-- **A key is unique in its project across every kind.** One unique index, `(project_id, key)` on
+- **A key is unique in its board across every kind.** One unique index, `(board_id, key)` on
   `records`, covers items, designs, plans, tasks, sprints and milestones, live and archived. 0.x
   already treated them as one id space (`allIdPools` in `lib/store.js`).
 - **A new key comes from `id_counters`, never from `max + 1`.** The allocation is one statement,
-  `INSERT ... ON CONFLICT (project_id, prefix) DO UPDATE SET next_number = next_number + 1
+  `INSERT ... ON CONFLICT (board_id, prefix) DO UPDATE SET next_number = next_number + 1
   RETURNING`, in the same transaction as the insert of the record. The row lock makes a second
   writer for the same prefix wait. If the insert fails, the transaction rolls back and the number
   is not used, so keys have no gaps from failures.
@@ -99,14 +102,14 @@ way. Every other field goes into `fields` with its 0.x name and value, so nothin
 | `milestones/*.json` | `milestone` | id, title, status | shippedDate, phases |
 | `comments[]` | comments, `kind = comment` | id as legacy_id, author, text, createdAt | |
 | a task's `progressNotes[]` | comments, `kind = progress` | text, timestamp as created_at | |
-| `pm.config.json` | projects.config | stages, entityTypes, commands, knowledgeBase, templates, frontend | |
+| `pm.config.json` | boards.config | stages, entityTypes, commands, knowledgeBase, templates, frontend | |
 
 Not imported: `meta.json` (its counters are replaced by `id_counters`), `port`, `dataDir`,
 `autoCommit` and `autoSync` from the config, and the `*.tests.json` files next to items and
 designs, which the 0.x store never reads either.
 
 After an import, each `id_counters` row is one more than the highest number with that prefix in
-the project, counting live, archived and skipped records.
+the board, counting live, archived and skipped records.
 
 ### What the importer reports
 
