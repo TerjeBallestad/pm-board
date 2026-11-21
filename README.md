@@ -70,6 +70,10 @@ answers as data. The importer's own changes from the report are allowed.
   `config`, `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
   `items/archived`, `items/{id}`, `designs`, `designs/{id}`, `plans`, `plans/{id}`, `sprints`,
   `sprints/{id}`, `milestones`, `milestones/{id}`.
+- `/api/projects/{slug}/events`: a server-sent event stream of changes, in 0.x's shape
+  (`data: {"entity":"item","id":"SB-042","action":"update"}`). Postgres triggers send every change
+  to a record or comment, from any writer, so the dashboard is never stale. A `resync` event asks
+  the client to load the board again.
 - `/api/...`: an unknown API path is 404, never the client.
 - Any other path serves the client, so `/<project>` opens that project's board.
 

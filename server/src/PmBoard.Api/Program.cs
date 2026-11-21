@@ -15,6 +15,9 @@ builder.Services.AddDbContext<BoardDb>(o =>
     o.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
 );
 
+builder.Services.AddSingleton<BoardEvents>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BoardEvents>());
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -50,6 +53,7 @@ app.MapGet(
 );
 
 app.MapReadRoutes();
+app.MapEventRoutes();
 
 // An unknown API path is a 404, never the client's index.html.
 app.Map("/api/{**rest}", () => Results.NotFound());
