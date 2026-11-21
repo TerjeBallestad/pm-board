@@ -12,6 +12,13 @@ public static class CommentKind
 public class Comment
 {
     public Guid Id { get; set; }
+
+    /// <summary>The place in its record's list, from 0, as in a 0.x comments array. Shown in this order.</summary>
+    public int Position { get; set; }
+
+    /// <summary>Insertion order. Breaks a tie when two writers add a comment with one position.</summary>
+    public long Seq { get; set; }
+
     public Guid RecordId { get; set; }
     public required string Kind { get; set; }
 

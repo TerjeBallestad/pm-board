@@ -48,9 +48,20 @@ namespace PmBoard.Api.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("legacy_id");
 
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
                     b.Property<Guid>("RecordId")
                         .HasColumnType("uuid")
                         .HasColumnName("record_id");
+
+                    b.Property<long>("Seq")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("seq");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Seq"));
 
                     b.Property<string>("Text")
                         .IsRequired()

@@ -51,6 +51,7 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
         b.Entity<Comment>(e =>
         {
             e.HasIndex(c => c.RecordId);
+            e.Property(c => c.Seq).UseIdentityAlwaysColumn();
             e.HasOne<Record>().WithMany().HasForeignKey(c => c.RecordId).OnDelete(DeleteBehavior.Restrict);
             e.ToTable(t => t.HasCheckConstraint("ck_comments_kind", "kind IN ('comment', 'progress')"));
         });

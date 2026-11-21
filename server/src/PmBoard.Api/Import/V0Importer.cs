@@ -86,6 +86,18 @@ public class V0Importer(BoardDb db)
             Add(project, RecordKind.Design, e, archivedAt: Time(e["archivedAt"]) ?? DateTimeOffset.UnixEpoch);
         }
 
+        // `tests` from the *.tests.json sidecar files: 0.x merges them into the record when it reads it.
+        foreach (var (id, tests) in dump["sidecarTests"]?.AsObject() ?? [])
+        {
+            if (_byKey.TryGetValue(id, out var r) && tests is not null)
+            {
+                var fields = JsonNode.Parse(r.Fields.RootElement.GetRawText())!.AsObject();
+                fields["tests"] = tests.DeepClone();
+                r.Fields = JsonDocument.Parse(fields.ToJsonString());
+                _report.SidecarTests++;
+            }
+        }
+
         // Skipped files keep their number reserved, the same as in 0.x.
         var reserved = new List<string>();
         foreach (var q in dump["quarantined"]?.AsArray() ?? [])
@@ -160,6 +172,13 @@ public class V0Importer(BoardDb db)
             }
         }
 
+        // A few old tasks have numbers in blockedBy (ordinal references). The column holds keys as text,
+        // so keep the original array in fields too; the API returns fields over columns.
+        if (e["blockedBy"] is JsonArray blockers && blockers.Any(b => b?.GetValueKind() != JsonValueKind.String))
+        {
+            fields["blockedBy"] = blockers.DeepClone();
+        }
+
         var r = new Record
         {
             Id = Guid.CreateVersion7(),
@@ -204,12 +223,14 @@ public class V0Importer(BoardDb db)
             _renumber.Add((r, clash));
         }
 
+        var position = 0;
         foreach (var c in e["comments"]?.AsArray().OfType<JsonObject>() ?? [])
         {
             _comments.Add(new Comment
             {
                 Id = Guid.CreateVersion7(),
                 RecordId = r.Id,
+                Position = position++,
                 Kind = CommentKind.Comment,
                 LegacyId = Text(c["id"]),
                 Author = Text(c["author"]),
@@ -217,12 +238,14 @@ public class V0Importer(BoardDb db)
                 CreatedAt = Time(c["createdAt"]),
             });
         }
+        position = 0;
         foreach (var n in e["progressNotes"]?.AsArray().OfType<JsonObject>() ?? [])
         {
             _comments.Add(new Comment
             {
                 Id = Guid.CreateVersion7(),
                 RecordId = r.Id,
+                Position = position++,
                 Kind = CommentKind.Progress,
                 Text = Text(n["text"]) ?? "",
                 CreatedAt = Time(n["timestamp"]),
@@ -354,4 +377,5 @@ public class ImportReport
     public List<string> NotRead { get; } = [];
     public List<Dangling> Dangling { get; } = [];
     public List<string> UnreadableTimes { get; } = [];
+    public int SidecarTests { get; set; }
 }

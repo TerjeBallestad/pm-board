@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using PmBoard.Api.Board;
 using PmBoard.Api.Data;
 using PmBoard.Api.Import;
 
@@ -47,6 +48,8 @@ app.MapGet(
         }
     }
 );
+
+app.MapReadRoutes();
 
 // An unknown API path is a 404, never the client's index.html.
 app.Map("/api/{**rest}", () => Results.NotFound());
