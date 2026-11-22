@@ -74,7 +74,9 @@ public static class TokenCommand
         await tx.CommitAsync();
 
         o.WriteLine(token);
-        e.WriteLine($"token {row.Id} for {userName} on {name}. It is shown only now: the server keeps its hash.");
+        // The id goes to stderr with the note. It is easy to copy it for the token, so say which line is the token.
+        e.WriteLine($"made token for {userName} on {name} (id {row.Id}, for token revoke).");
+        e.WriteLine($"The token is the other line, the one that starts with {Tokens.Prefix}. It is shown only now: the server keeps its hash.");
         return 0;
     }
 
