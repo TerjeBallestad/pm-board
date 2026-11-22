@@ -11,12 +11,11 @@
 // wiped), mints a token with `PmBoard.Api token create`, and starts the server on a free port,
 // unless --base points at one that uses the same database. Build the server first
 // (dotnet build server/PmBoard.slnx).
-import { spawn, spawnSync, execSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { openV0Board } from './v0-board.mjs';
+import { startV1Board } from './v1-board.mjs';
+import { makeDiff } from './golden-diff.mjs';
 import { appendPromptKnowledge, appendReviewKnowledge } from '../shared/knowledge-base.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -31,44 +30,10 @@ if (!pgUrl) {
 
 const start = Date.now();
 const slug = `write-golden-${start.toString(36)}`;
-const u = new URL(pgUrl);
-const npgsql = `Host=${u.hostname};Port=${u.port || 5432};Database=${u.pathname.slice(1)};Username=${decodeURIComponent(u.username)};Password=${decodeURIComponent(u.password)}`;
-const env = { ...process.env, ConnectionStrings__pmboard: npgsql, Logging__LogLevel__Default: 'Warning' };
-const project = here('../server/src/PmBoard.Api');
 
 // --- 1.x: export the fixture with the 0.x code, import it, start a server ---
-const work = mkdtempSync(join(tmpdir(), 'pm-compare-write-'));
-const dumpPath = join(work, 'dump.json');
-const exp = spawnSync(process.execPath, [here('./export-v0.mjs'), fixture, '--slug', slug], { encoding: 'utf8', maxBuffer: 1 << 28 });
-if (exp.status !== 0) throw new Error(`export failed: ${exp.stderr}`);
-writeFileSync(dumpPath, exp.stdout);
-const imp = spawnSync('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', project, '--', 'import', dumpPath], { env, encoding: 'utf8' });
-if (imp.status !== 0) throw new Error(`import failed: ${imp.stdout}\n${imp.stderr}`);
-// Writes need a token (DD-003). Its user is named "user": a comment with no author records the
-// token's user in 1.x, where 0.x wrote "user" (DD-020), so this name keeps the two sides equal.
-const mint = spawnSync('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', project, '--', 'token', 'create', '--user', 'user', '--name', slug], { env, encoding: 'utf8' });
-if (mint.status !== 0) throw new Error(`token create failed: ${mint.stdout}\n${mint.stderr}`);
-const token = mint.stdout.trim();
-
-let server = null;
-let base = baseArg;
-if (!base) {
-  const port = 5300 + Math.floor(Math.random() * 600);
-  base = `http://localhost:${port}`;
-  server = spawn('dotnet', ['run', '--no-build', '--no-launch-profile', '--project', project], {
-    env: { ...env, ASPNETCORE_URLS: base },
-    stdio: ['ignore', process.env.PMB_SERVER_LOG ? 'inherit' : 'ignore', 'inherit'],
-  });
-  for (let i = 0; ; i++) {
-    try {
-      if ((await fetch(`${base}/api/health`)).ok) break;
-    } catch {
-      /* not up yet */
-    }
-    if (i > 120) throw new Error('the server did not start');
-    await new Promise((r) => setTimeout(r, 250));
-  }
-}
+const v1Board = await startV1Board({ fixture, slug, pgUrl, base: baseArg });
+const { base, token } = v1Board;
 
 // --- 0.x: the same fixture, a temp copy ---
 const board = await openV0Board(fixture);
@@ -100,64 +65,8 @@ async function v1(method, path, body) {
   return { status: r.status, data };
 }
 
-// --- comparison: compare-read's rules, and new values on both sides ---
-const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/;
-const ISO_IN_TEXT = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g;
-const isNewTime = (s) => Date.parse(s) >= start - 1000;
-const isNewCommentId = (s) => /^c\d+$/.test(s) && Number(s.slice(1)) >= start - 1000;
-const empty = (v) => v === null || v === undefined || (Array.isArray(v) && v.length === 0);
-const textTimes = (s) => s.replace(ISO_IN_TEXT, (t) => (isNewTime(t) ? '<new time>' : t));
-
-/**
- * The first difference between a (0.x) and b (1.x), or null. pa and pb are the same value after the
- * step before: a new time or comment id passes only when both sides changed it in this step, or
- * neither did.
- */
-function diff(a, b, path = '', pa, pb) {
-  if (empty(a) && empty(b)) return null;
-  if (typeof a === 'string' && typeof b === 'string') {
-    const sameChange = (a === pa) === (b === pb);
-    if (a === b) return null;
-    if (ISO.test(a) && ISO.test(b)) {
-      return Date.parse(a) === Date.parse(b) || (isNewTime(a) && isNewTime(b) && sameChange) ? null : { path, a, b };
-    }
-    if (path.endsWith('.id') && isNewCommentId(a) && isNewCommentId(b) && sameChange) return null;
-    return textTimes(a) === textTimes(b) ? null : { path, a, b };
-  }
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return { path: path + '.length', a: a.length, b: b.length };
-    for (let i = 0; i < a.length; i++) {
-      const d = diff(a[i], b[i], `${path}[${i}]`, pa?.[i], pb?.[i]);
-      if (d) return d;
-    }
-    return null;
-  }
-  if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
-    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
-      const d = diff(a[k], b[k], `${path}.${k}`, pa?.[k], pb?.[k]);
-      if (d) return d;
-    }
-    return null;
-  }
-  return JSON.stringify(a) === JSON.stringify(b) ? null : { path, a, b };
-}
-
-/** Lists compare by id, as in compare-read: the order of files on disk is not a contract. */
-function diffList(a, b, path, pa, pb) {
-  if (!Array.isArray(a) || !Array.isArray(b)) return diff(a, b, path, pa, pb);
-  const byId = new Map(b.map((x) => [x.id, x]));
-  const prevA = new Map((Array.isArray(pa) ? pa : []).map((x) => [x.id, x]));
-  const prevB = new Map((Array.isArray(pb) ? pb : []).map((x) => [x.id, x]));
-  for (const x of a) {
-    const d = byId.has(x.id)
-      ? diff(x, byId.get(x.id), `${path}/${x.id}`, prevA.get(x.id), prevB.get(x.id))
-      : { path: `${path}/${x.id}`, a: 'present', b: 'missing' };
-    if (d) return d;
-  }
-  const ids = new Set(a.map((x) => x.id));
-  const extra = b.filter((y) => !ids.has(y.id)).map((y) => y.id);
-  return extra.length ? { path, a: 'missing', b: extra } : null;
-}
+// --- comparison: compare-read's rules, and new values on both sides (golden-diff.mjs) ---
+const { diff, diffList } = makeDiff(start);
 
 /** What each read route answered after the step before, on each side. */
 const previous = new Map();
@@ -348,7 +257,6 @@ for (let i = 0; i < steps.length; i++) {
 }
 
 board.close();
-server?.kill('SIGTERM');
-rmSync(work, { recursive: true, force: true });
+v1Board.close();
 console.log(failures ? `${failures} differences` : `no differences (${compared} steps, every read route after each)`);
 process.exit(failures ? 1 : 0);

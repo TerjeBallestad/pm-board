@@ -110,6 +110,12 @@ jobs:
       - run: node tools/compare-write.mjs
         env:
           PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
+      # The 1.x CLI: its copies of shared/ are current, and every command prints what 0.x prints.
+      - run: npm test
+        working-directory: cli
+      - run: node tools/compare-cli.mjs
+        env:
+          PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
 
   image:
     needs: [server, client, e2e, golden-write]

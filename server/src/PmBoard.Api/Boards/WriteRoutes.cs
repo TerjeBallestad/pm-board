@@ -8,6 +8,7 @@ public static class WriteRoutes
 {
     public static void MapWriteRoutes(this WebApplication app)
     {
+        app.MapBoardWrites();
         var g = app.MapGroup("/api/boards/{slug}");
         g.MapItemWrites();
         g.MapDesignWrites();

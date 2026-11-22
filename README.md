@@ -17,10 +17,11 @@ server/   ASP.NET Core 10 minimal API, EF Core on Postgres (PmBoard.slnx)
 client/   Vite + React + TypeScript dashboard, built into the API's wwwroot
 ```
 
-`cli/` (the 1.x thin client) comes in a later task. `shared/` holds the glossary and the
-knowledge-base append for prompts (DD-017). `tools/` holds `export-v0.mjs`, which reads a 0.x board
-with the 0.x store for the importer, and the golden checks `compare-read.mjs` and
-`compare-write.mjs`.
+`cli/` is the 1.x `pm` command, the npm package `@terjeballestad/pm-board-cli@1` (DD-021, and
+cli/README.md). `shared/` holds the glossary and the knowledge-base append for prompts (DD-017); the
+CLI ships copies in `cli/lib` (`npm run sync-shared`, and its test checks them). `tools/` holds
+`export-v0.mjs`, which reads a 0.x board with the 0.x store for the importer, and the golden checks
+`compare-read.mjs`, `compare-write.mjs` and `compare-cli.mjs`.
 
 ## Develop
 
@@ -78,12 +79,23 @@ It runs one script of about 90 requests against 0.x (on a temp copy of
 `tools/fixtures/write-board`) and against 1.x (the same board imported under a new slug, on a
 server it starts), and compares each answer and then every read route after each step. CI runs it.
 
+To check the CLI against 0.x, the same way:
+
+```sh
+PMB_PG=postgres://pm_board:pm_board@localhost:5432/pm_board node tools/compare-cli.mjs
+```
+
+It runs about 160 `pm` commands with 0.x's `bin/pm` (serverless, on a temp copy of the fixture)
+and with `cli/bin/pm` (against a server that imported it), and compares exit code, stdout and
+stderr. JSON compares as data. Then it checks the 1.x-only commands: `init`, tokens, `serve`.
+
 ## Routes
 
 - `/api/health`: `{"ok": true}` when Postgres answers, 503 when it does not.
-- `/api/boards`: every board, `{slug, name}`.
+- `/api/boards`: every board, `{slug, name}`. POST `{slug, name}` creates an empty board with
+  0.x's default config, for `pm init` (201, or 409 when the slug is taken; DD-021).
 - `/api/boards/{slug}/...`: 0.x's read routes for that board, with the same JSON and filters:
-  `config`, `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
+  `config` (with `knowledgeBase` for the CLI), `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
   `items/archived`, `items/{id}`, `designs`, `designs/{id}`, `plans`, `plans/{id}`, `sprints`,
   `sprints/{id}`, `milestones`, `milestones/{id}`.
 - Writes, per board, in 0.x's request and response shapes, with 0.x's error texts and status
@@ -140,7 +152,8 @@ kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token list
 kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token revoke <id>
 ```
 
-Put the token in the machine's pm config, not in a repo.
+Put the token in the machine's pm config, `~/.config/pm/config.json` (`{"url": ..., "token": ...}`,
+mode 600), not in a repo. `PM_TOKEN` overrides it.
 
 ## Deploy
 

@@ -181,7 +181,7 @@ public static class ReadRoutes
             .ToList();
     }
 
-    /// <summary>0.x's /api/config: name, stages, entityTypes, commands, with 0.x's defaults where missing.</summary>
+    /// <summary>0.x's /api/config: name, stages, entityTypes, commands, with 0.x's defaults where missing, and knowledgeBase.</summary>
     public static JsonObject Config(Board p)
     {
         var merged = new BoardConfig(p).Merged;
@@ -192,6 +192,8 @@ public static class ReadRoutes
             ["entityTypes"] = merged["entityTypes"]?.DeepClone(),
             ["commands"] = merged["commands"]?.DeepClone() ?? new JsonObject(),
             ["claimTtlHours"] = merged["claimTtlHours"]?.DeepClone(),
+            // Not in 0.x's /api/config: the 1.x CLI runs the knowledge-base queries itself (DD-017).
+            ["knowledgeBase"] = merged["knowledgeBase"]?.DeepClone(),
         };
     }
 }

@@ -21,10 +21,11 @@ behaviour only with a DD that says why.
 server/   PmBoard.slnx: src/PmBoard.Api (minimal API, EF Core, Npgsql), tests/PmBoard.Api.Tests
           docs/data-model.md: the schema and the mapping from 0.x. Keep it current.
 client/   Vite + React + TS dashboard on @terjeballestad/bob; e2e/ holds the Playwright tests
+cli/      the 1.x `pm` command (bin/pm: 0.x's bin/pm over HTTP, DD-021); lib/ holds copies of shared/
 shared/   glossary.js: 0.x's glossary module, unchanged, plain ESM (its test enforces that)
 shared/   also knowledge-base.js: the CLI appends knowledge-base results to prompts with it (DD-017)
-tools/    export-v0.mjs, compare-read.mjs, compare-write.mjs, v0-board.mjs: read 0.x boards with the
-          0.x code itself; fixtures/write-board is compare-write's 0.x board
+tools/    export-v0.mjs, compare-read.mjs, compare-write.mjs, compare-cli.mjs, v0-board.mjs: read 0.x
+          boards with the 0.x code itself; fixtures/write-board is the golden checks' 0.x board
 ```
 
 ## Checks before you push
@@ -46,12 +47,14 @@ docker run -d --name pmb-e2e-pg -p 55433:5432 -e POSTGRES_USER=pm_board -e POSTG
 cd client && E2E_PG=postgres://pm_board:pm_board@localhost:55433/pm_board npm run e2e
 ```
 
-When you touch the write side, run the golden write check (CI runs it too): it adds a board to the
-database you give it and starts its own server.
+When you touch the write side or the CLI, run the golden write and CLI checks (CI runs them too):
+each adds a board to the database you give it and starts its own server.
 
 ```sh
 dotnet build server/PmBoard.slnx && (cd tools && npm install)
 PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-write.mjs
+(cd cli && npm test)   # cli/lib's copies of shared/ are current: after a change, npm run sync-shared
+PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-cli.mjs
 ```
 
 When you touch the read side (routes, V0Json, the importer), also run the golden check against the
