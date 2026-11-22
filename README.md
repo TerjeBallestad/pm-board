@@ -144,12 +144,13 @@ token, so the read-only dashboard works as before. Four POST routes change nothi
 token either: `sprints/{id}/suggest`, `sprints/{id}/explore`, `context/prompt` and
 `context/review`.
 
-Give each machine its own token, so you can revoke one without the others:
+Give each machine its own token, so you can revoke one without the others. The real tokens come
+from the server in the cluster, so run the command in its pod:
 
 ```sh
-cd server && dotnet run --project src/PmBoard.Api -- token create --user terje --name mac-mini
-dotnet run --project src/PmBoard.Api -- token list
-dotnet run --project src/PmBoard.Api -- token revoke <id>      # the whole id from token list
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token create --user terje --name mac-mini
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token list
+kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token revoke <id>   # the whole id from token list
 ```
 
 `token create` makes the user when it is new and prints the token on stdout, once. The server
@@ -160,12 +161,11 @@ are not revoked must have different names.
 A comment with no `author` records the token's user, where 0.x wrote `user`. A claim with no
 `assignee` claims for the token's user, where 0.x refused it (DD-020).
 
-In the cluster, run the same command in the pod. It uses the pod's database:
+For a local server (see Develop), run the same command with `dotnet run`. It uses the database in
+the dev settings:
 
 ```sh
-kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token create --user terje --name mac-mini
-kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token list
-kubectl -n pm-board exec deploy/pm-board -- dotnet PmBoard.Api.dll token revoke <id>
+cd server && dotnet run --project src/PmBoard.Api -- token create --user terje --name dev
 ```
 
 Put the token in the machine's pm config, `~/.config/pm/config.json` (`{"url": ..., "token": ...}`,
