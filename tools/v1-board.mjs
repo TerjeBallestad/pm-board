@@ -53,6 +53,8 @@ export async function startV1Board({ fixture, slug, pgUrl, base = null }) {
     slug,
     base,
     token,
+    /** Runs `PmBoard.Api <args>` on the same database. */
+    dotnet,
     close: () => {
       server?.kill('SIGTERM');
       rmSync(work, { recursive: true, force: true });

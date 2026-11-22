@@ -89,6 +89,22 @@ It runs about 160 `pm` commands with 0.x's `bin/pm` (serverless, on a temp copy 
 and with `cli/bin/pm` (against a server that imported it), and compares exit code, stdout and
 stderr. JSON compares as data. Then it checks the 1.x-only commands: `init`, tokens, `serve`.
 
+## Export to pm-data
+
+```sh
+cd server && dotnet run --project src/PmBoard.Api -- export ../out [--board <slug> ...]
+```
+
+`export` writes every board, or the ones named, as a 0.x board folder, `out/<slug>/`:
+`pm.config.json`, `data/items` and `data/designs` as markdown with frontmatter, `data/plans`,
+`data/sprints` and `data/milestones` as JSON, `data/archive`, the `*.tests.json` sidecars,
+`attachments/` and `templates/` (DD-005, DD-022). 0.x can read it: `cd out/<slug> && pm list`. The
+same data gives the same bytes, so an export with no change makes no commit. It reads one snapshot
+and never writes into a folder that exists.
+
+`tools/compare-export.mjs` checks it: it changes the fixture with awkward text, exports it, and
+`compare-read.mjs` reads the export with 0.x's own code against the server. CI runs it.
+
 ## Routes
 
 - `/api/health`: `{"ok": true}` when Postgres answers, 503 when it does not.

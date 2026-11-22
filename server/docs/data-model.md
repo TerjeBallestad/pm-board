@@ -184,3 +184,16 @@ What 1.x does differently on purpose is in DD-016 to DD-019.
 - Postgres `jsonb` does not keep the order of keys in `fields`, and a typed column cannot tell a
   missing field from `null`. The 1.x API writes fields in a fixed order. The golden tests in
   PLAN-001 Task 6 compare `--json` output as data, not as text.
+
+## Back to 0.x files (the export)
+
+`PmBoard.Api export` reads the mapping above the other way (DD-022). Each record becomes its V0Json
+shape, the same JSON the read API answers, and goes where 0.x keeps it: a live item or design to
+`data/items` or `data/designs` as markdown, a plan, project or milestone to its folder as JSON,
+an archived record to `data/archive`. A `tests` field goes to its `*.tests.json` sidecar. The
+board's config becomes `pm.config.json`, with `dataDir: "data"`, and `templateFiles` becomes a
+`templates` folder.
+
+Frontmatter is block-style YAML with every string in JSON quotes. YAML 1.2 reads a JSON-quoted
+string as the same string, so no title such as `null`, `yes` or `key: value` changes type. Keys
+follow V0Json's order, so the first export of a board can order keys unlike its 0.x files.

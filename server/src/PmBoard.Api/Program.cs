@@ -4,13 +4,14 @@ using Npgsql;
 using PmBoard.Api.Auth;
 using PmBoard.Api.Boards;
 using PmBoard.Api.Data;
+using PmBoard.Api.Export;
 using PmBoard.Api.Import;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // The one-off commands (import, token) keep stdout for their own output: `token create` prints the
 // token there, so `TOKEN=$(... token create ...)` gets the token alone. Logs go to stderr.
-if (args is ["import" or "token", ..])
+if (args is ["import" or "token" or "export", ..])
 {
     builder.Services.Configure<ConsoleLoggerOptions>(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 }
@@ -40,6 +41,13 @@ using (var scope = app.Services.CreateScope())
 if (args is ["import", .. var dumps])
 {
     Environment.ExitCode = await ImportCommand.RunAsync(app.Services, dumps);
+    return;
+}
+
+// `dotnet PmBoard.Api.dll export <dir> [--board <slug> ...]` writes boards as 0.x folders and exits.
+if (args is ["export", .. var exportArgs])
+{
+    Environment.ExitCode = await ExportCommand.RunAsync(app.Services, exportArgs);
     return;
 }
 
