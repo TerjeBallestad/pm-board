@@ -115,6 +115,8 @@ test('Start copies the configured command', async ({ page, context }) => {
 
 test('quick open finds a record by key or title', async ({ page }) => {
   await page.goto(`${B}/tickets`);
+  // The shortcut listens once the board has rendered; a key pressed before that is lost.
+  await expect(card(page, 'SB-001')).toBeVisible();
   await page.keyboard.press('ControlOrMeta+k');
   await page.locator('.pm-qo-input').fill('widget lay');
   await expect(page.locator('.pm-qo-row').first()).toContainText('SDD-001');
