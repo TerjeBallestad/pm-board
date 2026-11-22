@@ -243,3 +243,59 @@ export function nextTaskSummary(planId, answer) {
     more: `One task in full: pm get TASK-NNN. Every task in full: pm next-task ${planId} --json`,
   };
 }
+
+// --- Write receipts (PLAN-003 Task 5, DD-027) ---
+// A write echoed the whole record: claim 2.4 KB on average, task-update up to 14 KB with every
+// progress note. The agent knows what it sent; it needs the key and what the server made of it.
+// --json prints the server's answer, as before 1.1.
+
+/** Print one line for a write, or the server's answer with --json. */
+export function printWrite(answer, text) {
+  if (flags.json === 'true') {
+    process.stdout.write(JSON.stringify(answer, null, 2) + '\n');
+  } else {
+    process.stdout.write(text + '\n');
+  }
+}
+
+/** One field's new value, short: a body as its size, a list joined, nothing as ''. */
+function shortValue(key, v) {
+  if (v === null || v === undefined || v === '') return "''";
+  if (key === 'body' || key === 'description' || key === 'context') {
+    const s = typeof v === 'string' ? v : JSON.stringify(v);
+    return `(${s.length} chars)`;
+  }
+  if (Array.isArray(v)) return v.length ? truncate(v.map(x => (typeof x === 'object' ? x.id || JSON.stringify(x) : x)).join(','), 80) : "''";
+  if (typeof v === 'object') return truncate(JSON.stringify(v), 80);
+  const text = truncate(String(v), 80);
+  // A comma inside a value would read as the next field.
+  return text.includes(',') ? JSON.stringify(text) : text;
+}
+
+// The request names some fields otherwise than the record does.
+const FIELD_OF = { sprint: 'sprintId', files: 'affectedFiles', items: 'itemIds' };
+
+/** `stage done, priority high, body (120 chars)`: each field sent, as the answer has it. */
+export function changes(sent, answer) {
+  return Object.keys(sent)
+    .map((k) => {
+      const field = FIELD_OF[k] || k;
+      const v = answer && field in answer ? answer[field] : sent[k];
+      if (field === 'tasks' && Array.isArray(v)) return `tasks (${v.length})`;
+      return `${field} ${shortValue(field, v)}`;
+    })
+    .join(', ');
+}
+
+/** When a claim ends: assignedAt plus the board's claimTtlHours, or never. */
+export function claimEnd(item) {
+  const ttl = Number(state.config?.claimTtlHours);
+  if (!item?.assignedAt || !(ttl > 0)) return 'with no expiry';
+  return `until ${new Date(Date.parse(item.assignedAt) + ttl * 3600 * 1000).toISOString()}`;
+}
+
+/** archive and sweep: how many went, and which. */
+export function archived(answer, none) {
+  const ids = answer?.ids || [];
+  return ids.length ? `archived ${ids.length}: ${truncate(ids.join(', '), 200)}` : none;
+}

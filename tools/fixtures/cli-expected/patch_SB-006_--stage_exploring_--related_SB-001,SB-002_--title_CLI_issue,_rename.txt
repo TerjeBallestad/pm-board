@@ -1,29 +1,5 @@
 $ pm patch SB-006 --stage exploring --related SB-001,SB-002 --title "CLI issue, renamed"
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "affectedFiles": [
-    "a.js",
-    "b.js"
-  ],
-  "aliases": [],
-  "assignedAt": null,
-  "assignee": null,
-  "blockedBy": [],
-  "body": "Inline body",
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "SB-006",
-  "pillar": "auth",
-  "priority": "high",
-  "related": [
-    "SB-001",
-    "SB-002"
-  ],
-  "sprintId": null,
-  "stage": "exploring",
-  "title": "CLI issue, renamed",
-  "type": "issue",
-  "updatedAt": "<new time>"
-}
+--- stdout
+updated SB-006: stage exploring, related SB-001,SB-002, title "CLI issue, renamed"
 --- stderr

@@ -1,25 +1,5 @@
 $ pm create issue "Blocked one" --blockedBy SB-006
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "affectedFiles": [],
-  "aliases": [],
-  "assignedAt": null,
-  "assignee": null,
-  "blockedBy": [
-    "SB-006"
-  ],
-  "body": "",
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "SB-007",
-  "pillar": "",
-  "priority": null,
-  "related": [],
-  "sprintId": null,
-  "stage": "inbox",
-  "title": "Blocked one",
-  "type": "issue",
-  "updatedAt": "<new time>"
-}
+--- stdout
+created SB-007 (issue): Blocked one
 --- stderr

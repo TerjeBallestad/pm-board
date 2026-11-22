@@ -1,15 +1,5 @@
 $ pm sdd "Shorthand design"
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "body": "",
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "SDD-003",
-  "itemIds": [],
-  "sprintId": null,
-  "stage": "sdd",
-  "title": "Shorthand design",
-  "updatedAt": "<new time>"
-}
+--- stdout
+created SDD-003 (design): Shorthand design
 --- stderr

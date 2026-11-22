@@ -1,18 +1,5 @@
 $ pm sdd SDD-002 --stage planned
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "body": "Design body",
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "SDD-002",
-  "itemIds": [
-    "SB-006",
-    "SB-404"
-  ],
-  "sprintId": "SPRINT-001",
-  "stage": "planned",
-  "title": "CLI design",
-  "updatedAt": "<new time>"
-}
+--- stdout
+updated SDD-002: stage planned
 --- stderr

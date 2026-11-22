@@ -13,7 +13,10 @@ import {
   api, httpJson, flags, positional, state, usageError, hasRequestFlags, isRequestFlag, loadConfig,
   runKnowledgeQuery, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
 } from './runtime.js';
-import { printList, fetchTerms, printGlossary, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary } from './output.js';
+import {
+  printList, fetchTerms, printGlossary, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary,
+  printWrite, changes, claimEnd, archived, truncate
+} from './output.js';
 import {
   fetchListByType, routeById, commentRoute, expandFileArg, resolveBody, buildItemBody,
   buildPatchBody, rejectCommandWordTitle
@@ -111,7 +114,7 @@ const glossary = {
 };
 
 const create = {
-  name: 'create', group: 'Write',
+  name: 'create', write: true, group: 'Write',
   synopsis: 'create <type> "title" [...]',
   usage: 'create <type> "title" [--priority P] [--body B] [--pillar P] [--sprint ID] [--files f1,f2] [--blockedBy IDs]',
   summary: 'A new item (issue, decision, concern, gap, term, ...)',
@@ -137,9 +140,21 @@ const create = {
     const reservedHint = RESERVED[type.toLowerCase()];
     if (reservedHint) usageError(`"${type}" is not a generic item type. Use: ${reservedHint}`);
     await resolveBody();
-    await api('POST', '/api/items', buildItemBody(type, title));
+    await createItem(buildItemBody(type, title));
   },
 };
+
+/** Create an item and print its receipt (DD-027). */
+async function createItem(body) {
+  const item = await api('POST', '/api/items', body, { silent: true });
+  printWrite(item, `created ${item.id} (${item.type}${item.sprintId ? `, ${item.sprintId}` : ''}): ${truncate(item.title, 100)}`);
+}
+
+/** Change a record and print what changed (DD-027). */
+async function patchRecord(path, id, body) {
+  const record = await api('PATCH', path, body, { silent: true });
+  printWrite(record, `updated ${record?.id || id}: ${changes(body, record) || 'nothing sent'}`);
+}
 
 const patchHelp = () => `Update any field on an item, design, or plan. The server refuses a field it does not know.
 
@@ -177,7 +192,7 @@ Projects (SPRINT):
   --status S            Set status (active, completed)`;
 
 const patch = {
-  name: 'patch', group: 'Write',
+  name: 'patch', write: true, group: 'Write',
   synopsis: 'patch <id> --field value ...', usage: 'patch <id> [--field value ...]',
   summary: 'Change fields of an item, design, plan or project',
   help: patchHelp,
@@ -187,12 +202,12 @@ const patch = {
     const id = positional[0];
     if (!id) usageError('Usage: pm patch <id> [--key value ...]');
     await resolveBody();
-    await api('PATCH', routeById(id), buildPatchBody());
+    await patchRecord(routeById(id), id, buildPatchBody());
   },
 };
 
 const comment = {
-  name: 'comment', group: 'Write',
+  name: 'comment', write: true, group: 'Write',
   synopsis: 'comment <id> "text" [--author A]', usage: 'comment <id> "text" [--author A]',
   summary: 'Add a comment to an item, design, plan or project',
   help: 'Adds a comment. The author is "claude" unless --author names someone.',
@@ -204,12 +219,13 @@ const comment = {
     const text = positional[1];
     if (!id || !text) usageError('Usage: pm comment <id> "text" [--author A]');
     const path = commentRoute(id);
-    await api('POST', path, { text, author: flags.author || 'claude' });
+    const c = await api('POST', path, { text, author: flags.author || 'claude' }, { silent: true });
+    printWrite(c, `commented on ${id.toUpperCase()} as ${c?.author || flags.author || 'claude'}`);
   },
 };
 
 const claim = {
-  name: 'claim', group: 'Write',
+  name: 'claim', write: true, group: 'Write',
   synopsis: 'claim <id> --as "label"', usage: 'claim <id> --as "label"',
   summary: 'Claim a ticket for this session; fails if another holds it',
   help: 'Claims a ticket for this session. It fails while another session holds a live claim.\nClaims expire after the board\'s claimTtlHours (default 4). Closing the ticket releases it.\nThe label comes from --as, else from CLAUDE_SESSION_ID.',
@@ -224,36 +240,39 @@ const claim = {
       usageError('Usage: pm claim <id> --as "session label"\n' +
         'A claim needs an assignee label (who is working this ticket).');
     }
-    await api('POST', `/api/items/${encodeURIComponent(id)}/claim`, { assignee });
+    const item = await api('POST', `/api/items/${encodeURIComponent(id)}/claim`, { assignee }, { silent: true });
+    printWrite(item, `claimed ${item.id} for ${item.assignee} ${claimEnd(item)}`);
   },
 };
 
 const release = {
-  name: 'release', group: 'Write',
+  name: 'release', write: true, group: 'Write',
   synopsis: 'release <id>', usage: 'release <id>',
   summary: 'Release a claim without closing the ticket',
   async run() {
     const id = positional[0];
     if (!id) usageError('Usage: pm release <id>');
-    await api('POST', `/api/items/${encodeURIComponent(id)}/release`, {});
+    const item = await api('POST', `/api/items/${encodeURIComponent(id)}/release`, {}, { silent: true });
+    printWrite(item, `released ${item.id}`);
   },
 };
 
 const archive = {
-  name: 'archive', group: 'Write',
+  name: 'archive', write: true, group: 'Write',
   synopsis: 'archive <id> [<id> ...]', usage: 'archive <id> [<id> ...]',
   summary: 'Move items to the archive',
   examples: ['pm archive SB-040 SB-041'],
   async run() {
     if (positional.length === 0) usageError('Usage: pm archive <id> [<id2>...]');
-    await api('POST', '/api/items/archive', { ids: positional });
+    const answer = await api('POST', '/api/items/archive', { ids: positional }, { silent: true });
+    printWrite(answer, archived(answer, 'archived nothing: no live item has those ids'));
   },
 };
 
 // --- plans and tasks ---
 
 const plan = {
-  name: 'plan', group: 'Plans and tasks',
+  name: 'plan', write: true, group: 'Plans and tasks',
   synopsis: 'plan <id> [--json]', usage: ['plan <PLAN-id> [--json]', 'plan create < plan.json', 'plan list [--sprint ID]'],
   summary: 'A plan\'s overview: one line per task, and the next task',
   help: 'Shows a plan: its project and notes in short, one line per task with its status and open\nblockers, and the next task. pm get TASK-NNN reads one task in full; --json gives the whole\nplan. With create: a new plan from JSON on stdin:\n{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}',
@@ -274,7 +293,10 @@ const plan = {
       let planData;
       try { planData = JSON.parse(input); }
       catch (e) { usageError(`Invalid JSON: ${e.message}`); }
-      await api('POST', '/api/plans', planData);
+      const created = await api('POST', '/api/plans', planData, { silent: true });
+      const ts = created.tasks || [];
+      printWrite(created, `created ${created.id}: ${truncate(created.title, 80)}, ${ts.length} task${ts.length === 1 ? '' : 's'}` +
+        `${ts.length ? ` (${ts[0].id}${ts.length > 1 ? `..${ts[ts.length - 1].id}` : ''})` : ''}. Next: pm plan ${created.id}`);
     } else if (action && isId(action, 'PLAN')) {
       if (flags.json === 'true') {
         await api('GET', `/api/plans/${action}`);
@@ -310,7 +332,7 @@ const nextTask = {
 };
 
 const taskUpdate = {
-  name: 'task-update', group: 'Plans and tasks',
+  name: 'task-update', write: true, group: 'Plans and tasks',
   synopsis: 'task-update <plan> <task> [...]',
   usage: 'task-update <plan-id> <task-id> [--status S] [--passes true|false] [--note N] [--description D] [--steps JSON] [--verification V]',
   summary: 'Change a task\'s status, or add a progress note',
@@ -341,12 +363,19 @@ const taskUpdate = {
       catch (e) { usageError(`Invalid JSON for --steps: ${e.message}`); }
     }
     if (flags.verification) body.verification = flags.verification;
-    await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, body);
+    const task = await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, body, { silent: true });
+    const { progressNote, ...fields } = body;
+    const parts = [changes(fields, task)];
+    if (progressNote) {
+      const n = (task.progressNotes || []).length;
+      parts.push(`note added (${n} note${n === 1 ? '' : 's'})`);
+    }
+    printWrite(task, `updated ${task.id} in ${planId.toUpperCase()}: ${parts.filter(Boolean).join(', ') || 'nothing sent'}`);
   },
 };
 
 const taskDone = {
-  name: 'task-done', group: 'Plans and tasks',
+  name: 'task-done', write: true, group: 'Plans and tasks',
   synopsis: 'task-done <plan> <task> "note"', usage: 'task-done <plan-id> <task-id> "note" | @file.md | -',
   summary: 'Mark a task done and passing, with a progress note',
   examples: ['pm task-done PLAN-003 TASK-020 "abc123 on main; checks pass"', 'pm task-done PLAN-003 TASK-020 @note.md'],
@@ -358,14 +387,15 @@ const taskDone = {
       usageError('Usage: pm task-done <plan-id> <task-id> "progress note" | @file.md | -');
     }
     note = await expandFileArg(note, 'note');
-    await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, {
+    const task = await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, {
       passes: true, status: 'done', progressNote: note
-    });
+    }, { silent: true });
+    printWrite(task, `done ${task.id} in ${planId.toUpperCase()}, passes, note added. Next: pm next-task ${planId.toUpperCase()}`);
   },
 };
 
 const planUpdate = {
-  name: 'plan-update', group: 'Plans and tasks',
+  name: 'plan-update', write: true, group: 'Plans and tasks',
   synopsis: 'plan-update <plan-id> [...]', usage: 'plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]',
   summary: 'Rename a plan, move its stage, or replace its tasks',
   flags: ['title', 'stage', 'tasks'],
@@ -396,14 +426,14 @@ const planUpdate = {
         catch (e) { usageError(`Invalid JSON for --tasks: ${e.message}`); }
       }
     }
-    await api('PATCH', `/api/plans/${planId}`, body);
+    await patchRecord(`/api/plans/${planId}`, planId, body);
   },
 };
 
 // --- projects ---
 
 const project = {
-  name: 'project', aliases: ['sprint'], group: 'Projects',
+  name: 'project', write: true, aliases: ['sprint'], group: 'Projects',
   synopsis: 'project [<id>] [--json]',
   usage: ['project [<SPRINT-id>] [--json]', 'project create "name" [--destination D] [--body B]', 'project <SPRINT-id> [--name N] [--destination D] [--body B] [--status S]', 'project list'],
   summary: 'A project\'s overview (default: the active one), or create one',
@@ -434,7 +464,8 @@ const project = {
       if (flags['problem-statement']) body.problemStatement = flags['problem-statement'];
       // --body is the project's markdown doc (decisions log, out-of-scope, …)
       if (flags.body) body.body = flags.body;
-      await api('POST', '/api/sprints', body);
+      const created = await api('POST', '/api/sprints', body, { silent: true });
+      printWrite(created, `created ${created.id} (project): ${truncate(created.name, 100)}`);
       return;
     }
     // pm project SPRINT-NNN --name "..." (patch shorthand)
@@ -446,7 +477,7 @@ const project = {
         if (key === 'destination' || key === 'problem-statement') patchBody.problemStatement = val;
         else patchBody[key] = val;
       }
-      await api('PATCH', `/api/sprints/${action}`, patchBody);
+      await patchRecord(`/api/sprints/${action}`, action, patchBody);
       return;
     }
     // pm sprint [id] — get sprint detail (default: active sprint).
@@ -467,7 +498,7 @@ const project = {
 // --- more ---
 
 const sdd = {
-  name: 'sdd', aliases: ['design'], group: 'More',
+  name: 'sdd', write: true, aliases: ['design'], group: 'More',
   synopsis: 'sdd <id> | sdd "title"',
   usage: ['sdd <SDD-id> [--field value ...]', 'sdd create "title" [--body B] [--items IDs] [--sprint ID]', 'sdd "title"', 'sdd list'],
   summary: 'A design doc: get, create, or change one',
@@ -493,11 +524,11 @@ const sdd = {
       if (flags.body) body.body = flags.body;
       if (flags.items) body.itemIds = flags.items.split(',');
       if (flags.sprint) body.sprintId = flags.sprint;
-      await api('POST', '/api/designs', body);
+      await createDesign(body);
     } else if (action && isId(action, 'SDD')) {
       if (hasRequestFlags()) {
         await resolveBody();
-        await api('PATCH', `/api/designs/${action}`, buildPatchBody());
+        await patchRecord(`/api/designs/${action}`, action, buildPatchBody());
       } else {
         await api('GET', `/api/designs/${action}`);
       }
@@ -508,16 +539,21 @@ const sdd = {
       if (flags.body) body.body = flags.body;
       if (flags.items) body.itemIds = flags.items.split(',');
       if (flags.sprint) body.sprintId = flags.sprint;
-      await api('POST', '/api/designs', body);
+      await createDesign(body);
     } else {
       usageError('Usage: pm sdd <SDD-id or "title"> | pm sdd create "title"');
     }
   },
 };
 
+async function createDesign(body) {
+  const d = await api('POST', '/api/designs', body, { silent: true });
+  printWrite(d, `created ${d.id} (design): ${truncate(d.title, 100)}`);
+}
+
 // pm issue|gap|decision|concern <id or "title">: get, change (with flags) or create.
 const shorthand = (name) => ({
-  name, group: 'More',
+  name, write: true, group: 'More',
   synopsis: `${name} <id> | ${name} "title"`, usage: [`${name} <id> [--field value ...]`, `${name} "title" [--priority P] [--body B] [--sprint ID] ...`, `${name} list`],
   summary: `Get, change or create a ${name}`,
   help: `With an id: shows it, or changes it when flags follow (as pm patch). With a title: creates\na ${name} (as pm create ${name}). With list: as pm list ${name}.`,
@@ -534,14 +570,14 @@ const shorthand = (name) => ({
     if (/^[A-Z]+-\d+$/i.test(arg)) {
       if (hasRequestFlags()) {
         await resolveBody();
-        await api('PATCH', routeById(arg), buildPatchBody());
+        await patchRecord(routeById(arg), arg, buildPatchBody());
       } else {
         await api('GET', routeById(arg));
       }
     } else {
       rejectCommandWordTitle(arg, name);
       await resolveBody();
-      await api('POST', '/api/items', buildItemBody(name, arg));
+      await createItem(buildItemBody(name, arg));
     }
   },
 });
@@ -550,14 +586,15 @@ issue.synopsis = 'issue <id> | issue "title"';
 issue.summary = 'Get, change or create an issue (also: decision, concern, gap)';
 
 const sweep = {
-  name: 'sweep', group: 'More',
+  name: 'sweep', write: true, group: 'More',
   synopsis: 'sweep [--days N]', usage: 'sweep [--days N]',
   summary: 'Archive items done more than N days ago (default 1)',
   help: 'Archives done items older than N days. Types with sweep: false in the board config\n(decisions and terms by default) stay.',
   flags: ['days'],
   async run() {
     const days = flags.days ? parseInt(flags.days, 10) : 1;
-    await api('POST', '/api/items/archive/sweep', { days });
+    const answer = await api('POST', '/api/items/archive/sweep', { days }, { silent: true });
+    printWrite(answer, archived(answer, `nothing to sweep: no item was done more than ${days} day${days === 1 ? '' : 's'} ago`));
   },
 };
 

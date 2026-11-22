@@ -38,6 +38,9 @@ Projects (SPRINT):
   --name N              Rename
   --status S            Set status (active, completed)
 
+Flags:
+  --json                    After a write: the server's answer in full, not one line
+
 Examples:
   pm patch SB-042 --stage done
   pm patch SB-042 --blockedBy SB-040,SB-041

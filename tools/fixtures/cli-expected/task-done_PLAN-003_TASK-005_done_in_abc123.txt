@@ -1,24 +1,5 @@
 $ pm task-done PLAN-003 TASK-005 "done in abc123"
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "blockedBy": [],
-  "description": "",
-  "id": "TASK-005",
-  "passes": true,
-  "progressNotes": [
-    {
-      "text": "started",
-      "timestamp": "<new time>"
-    },
-    {
-      "text": "done in abc123",
-      "timestamp": "<new time>"
-    }
-  ],
-  "status": "done",
-  "steps": [],
-  "title": "First",
-  "verification": ""
-}
+--- stdout
+done TASK-005 in PLAN-003, passes, note added. Next: pm next-task PLAN-003
 --- stderr

@@ -1,10 +1,5 @@
 $ pm comment PLAN-001 "A plan note"
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "author": "claude",
-  "createdAt": "<new time>",
-  "id": "<new comment id>",
-  "text": "A plan note"
-}
+--- stdout
+commented on PLAN-001 as claude
 --- stderr

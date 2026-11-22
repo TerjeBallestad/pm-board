@@ -1,51 +1,6 @@
 $ pm plan create
 (stdin "{\"title\":\"CLI plan\",\"sddId\":\"SDD-002\",\"sprintId\":\"SPRINT-001\",\"context\":{\"setupNotes\":\"Notes\",\"relevantFiles\":[\"a.js\"],\"designDecisions\":\"DD-001\"},\"tasks\":[{\"title\":\"First\"},{\"title\":\"Second\",\"blockedBy\":[\"Task 1\"],\"steps\":[\"one\",\"two\"]}]}")
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "comments": [],
-  "context": {
-    "designDecisions": "DD-001",
-    "relevantFiles": [
-      "a.js"
-    ],
-    "setupNotes": "Notes"
-  },
-  "createdAt": "<new time>",
-  "id": "PLAN-003",
-  "sddId": "SDD-002",
-  "sprintId": "SPRINT-001",
-  "stage": "planned",
-  "tasks": [
-    {
-      "blockedBy": [],
-      "description": "",
-      "id": "TASK-005",
-      "passes": false,
-      "progressNotes": [],
-      "status": "pending",
-      "steps": [],
-      "title": "First",
-      "verification": ""
-    },
-    {
-      "blockedBy": [
-        "TASK-005"
-      ],
-      "description": "",
-      "id": "TASK-006",
-      "passes": false,
-      "progressNotes": [],
-      "status": "pending",
-      "steps": [
-        "one",
-        "two"
-      ],
-      "title": "Second",
-      "verification": ""
-    }
-  ],
-  "title": "CLI plan",
-  "updatedAt": "<new time>"
-}
+--- stdout
+created PLAN-003: CLI plan, 2 tasks (TASK-005..TASK-006). Next: pm plan PLAN-003
 --- stderr

@@ -1,10 +1,5 @@
 $ pm comment SB-001 Signed --author agent-a
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "author": "agent-a",
-  "createdAt": "<new time>",
-  "id": "<new comment id>",
-  "text": "Signed"
-}
+--- stdout
+commented on SB-001 as agent-a
 --- stderr

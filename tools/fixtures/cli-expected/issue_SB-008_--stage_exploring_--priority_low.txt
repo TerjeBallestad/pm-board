@@ -1,22 +1,5 @@
 $ pm issue SB-008 --stage exploring --priority low
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "affectedFiles": [],
-  "aliases": [],
-  "assignedAt": null,
-  "assignee": null,
-  "blockedBy": [],
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "SB-008",
-  "pillar": "",
-  "priority": "low",
-  "related": [],
-  "sprintId": null,
-  "stage": "exploring",
-  "title": "Shorthand issue",
-  "type": "issue",
-  "updatedAt": "<new time>"
-}
+--- stdout
+updated SB-008: stage exploring, priority low
 --- stderr

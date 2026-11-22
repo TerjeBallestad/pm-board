@@ -1,23 +1,5 @@
 $ pm patch SB-004 --stage done
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "affectedFiles": [],
-  "aliases": [],
-  "assignedAt": null,
-  "assignee": null,
-  "blockedBy": [],
-  "comments": [],
-  "createdAt": "2026-01-01T10:00:00.000Z",
-  "doneAt": "<new time>",
-  "id": "SB-004",
-  "pillar": "",
-  "priority": null,
-  "related": [],
-  "sprintId": null,
-  "stage": "done",
-  "title": "Claimed long ago",
-  "type": "issue",
-  "updatedAt": "<new time>"
-}
+--- stdout
+updated SB-004: stage done
 --- stderr

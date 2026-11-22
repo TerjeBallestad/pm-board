@@ -1,23 +1,5 @@
 $ pm create term Board --body "One repo's whole board."
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "affectedFiles": [],
-  "aliases": [],
-  "assignedAt": null,
-  "assignee": null,
-  "blockedBy": [],
-  "body": "One repo's whole board.",
-  "comments": [],
-  "createdAt": "<new time>",
-  "id": "TERM-002",
-  "pillar": "",
-  "priority": null,
-  "related": [],
-  "sprintId": null,
-  "stage": "inbox",
-  "title": "Board",
-  "type": "term",
-  "updatedAt": "<new time>"
-}
+--- stdout
+created TERM-002 (term): Board
 --- stderr

@@ -1,10 +1,5 @@
 $ pm comment SB-001 "A CLI comment"
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "author": "claude",
-  "createdAt": "<new time>",
-  "id": "<new comment id>",
-  "text": "A CLI comment"
-}
+--- stdout
+commented on SB-001 as claude
 --- stderr

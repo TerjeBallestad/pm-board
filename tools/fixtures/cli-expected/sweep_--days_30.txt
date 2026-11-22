@@ -1,10 +1,5 @@
 $ pm sweep --days 30
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "archived": 1,
-  "ids": [
-    "SB-003"
-  ]
-}
+--- stdout
+archived 1: SB-003
 --- stderr

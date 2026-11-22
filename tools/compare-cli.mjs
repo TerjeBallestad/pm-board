@@ -448,7 +448,7 @@ const only = [
   ['init of a board that exists links to it', () => v1In(repoB, ['init', newSlug]), (r) => r.code === 0 && /linked/.test(r.stdout) && pmJson(repoB)?.board === newSlug],
   ['a bad slug is 400', () => v1In(join(repoA, 'nested'), ['init', 'Not A Slug']), (r) => r.code === 1 && /Error 400/.test(r.stderr)],
   ['a new board lists nothing, from a subfolder', () => v1In(join(repoA, 'nested'), ['list']), (r) => r.code === 0 && r.stdout === '(none)\n'],
-  ['its first issue is SB-001, from the other clone', () => v1In(repoB, ['create', 'issue', 'First']), (r) => r.code === 0 && parse(r.stdout).value?.id === 'SB-001'],
+  ['its first issue is SB-001, from the other clone', () => v1In(repoB, ['create', 'issue', 'First']), (r) => r.code === 0 && r.stdout === 'created SB-001 (issue): First\n'],
   ['the first clone sees it', () => v1In(repoA, ['list']), (r) => r.code === 0 && /^SB-001 {2}First$/m.test(r.stdout)],
   ['health names the board', () => v1In(repoA, ['health']), (r) => r.code === 0 && parse(r.stdout).value?.project === 'Init board'],
   ['--board picks another board', () => v1In(repoA, ['get', 'SB-001', '--board', slug]), (r) => r.code === 0 && parse(r.stdout).value?.title === 'Fix the login flow'],
@@ -460,7 +460,7 @@ const only = [
     mkdirSync(join(cfgHome, 'pm'), { recursive: true });
     writeFileSync(join(cfgHome, 'pm', 'config.json'), JSON.stringify({ url: v1Board.base, token: v1Board.token }));
     return v1In(repoA, ['comment', 'SB-001', 'From the config file'], { PM_URL: '', PM_TOKEN: '', XDG_CONFIG_HOME: cfgHome });
-  }, (r) => r.code === 0 && /From the config file/.test(r.stdout)],
+  }, (r) => r.code === 0 && r.stdout === 'commented on SB-001 as claude\n'],
   ['no .pm.json is an error that names pm init', () => v1In(tmpdir(), ['list']), (r) => r.code === 1 && /pm init <slug>/.test(r.stderr)],
   ['serve, start and stop print a note', () => v1In(repoA, ['serve']), (r) => r.code === 0 && /gone in pm 1.x/.test(r.stdout)],
   // The command table (PLAN-003 Task 3, DD-025): help per command, --version, did-you-mean, flag checks.
@@ -494,6 +494,14 @@ const only = [
     return r.code === 0 && j?.planId === 'PLAN-001' && Array.isArray(j.tasks) && (j.next === null || typeof j.next.id === 'string') && j.tasks.every((t) => !('steps' in t));
   }],
   ['pm next-task --json is the answer as before 1.1', () => v1In(repoB, ['next-task', 'PLAN-001', '--json', '--board', slug]), (r) => r.code === 0 && Array.isArray(parse(r.stdout).value?.tasks) && 'unblocked' in (parse(r.stdout).value?.tasks?.[0] ?? {})],
+  // Write receipts (PLAN-003 Task 5, DD-027).
+  ['a write prints one line, and --json the server\'s answer', () => {
+    const a = v1In(repoB, ['create', 'issue', 'Receipt check']);
+    const b = v1In(repoB, ['create', 'issue', 'Receipt check, JSON', '--json']);
+    return { code: a.code || b.code, stdout: a.stdout + '|' + (parse(b.stdout).value?.title ?? ''), stderr: '' };
+  }, (r) => r.code === 0 && r.stdout === 'created SB-002 (issue): Receipt check\n|Receipt check, JSON'],
+  ['a claim says until when', () => v1In(repoB, ['claim', 'SB-002', '--as', 'agent-z']), (r) => r.code === 0 && /^claimed SB-002 for agent-z until \d{4}-\d\d-\d\dT/.test(r.stdout)],
+  ['a patch names each field as the server has it', () => v1In(repoB, ['patch', 'SB-002', '--stage', 'exploring', '--related', 'SB-001', '--body', 'twelve chars']), (r) => r.code === 0 && r.stdout === 'updated SB-002: stage exploring, related SB-001, body (12 chars)\n'],
   ['a server that does not answer names its url', () => v1In(repoA, ['list'], { PM_URL: 'http://127.0.0.1:9' }), (r) => r.code === 1 && /Cannot reach the pm server at http:\/\/127.0.0.1:9/.test(r.stderr)],
 ];
 for (const [name, act, ok] of only) {

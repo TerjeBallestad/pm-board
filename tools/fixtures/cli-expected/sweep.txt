@@ -1,8 +1,5 @@
 $ pm sweep
 exit 0
---- stdout (JSON, keys sorted)
-{
-  "archived": 0,
-  "ids": []
-}
+--- stdout
+nothing to sweep: no item was done more than 1 day ago
 --- stderr

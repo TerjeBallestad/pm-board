@@ -80,9 +80,12 @@ export function renderUsage(commands, groups) {
 export function renderCommandHelp(c) {
   const out = [`Usage: ${[].concat(c.usage).map((u, i) => (i ? '       pm ' : 'pm ') + u).join('\n')}`, ''];
   out.push(typeof c.help === 'function' ? c.help() : c.help || c.summary);
-  if (c.flagHelp?.length) {
+  const flagHelp = [...(c.flagHelp || [])];
+  // A write prints one line; --json gives the server's answer (DD-027).
+  if (c.write && !flagHelp.some(([f]) => f.startsWith('--json'))) flagHelp.push(['--json', 'After a write: the server\'s answer in full, not one line']);
+  if (flagHelp.length) {
     out.push('', 'Flags:');
-    for (const [f, text] of c.flagHelp) out.push(line(f, text, 26));
+    for (const [f, text] of flagHelp) out.push(line(f, text, 26));
   }
   if (c.examples?.length) {
     out.push('', 'Examples:');
