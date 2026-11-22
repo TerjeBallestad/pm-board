@@ -1,0 +1,1152 @@
+#!/usr/bin/env node
+
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join, dirname, resolve, basename } from 'path';
+import { fileURLToPath } from 'url';
+import { homedir } from 'os';
+import { execSync } from 'child_process';
+import http from 'http';
+import https from 'https';
+import { buildTermIndex, findTermMatches, firstMatchPerTerm, describeConflict, signpostHint } from '../lib/glossary.js';
+import { appendPromptKnowledge, appendReviewKnowledge } from '../lib/knowledge-base.js';
+
+// pm 1.x: the same commands and output as 0.x (pm-board-cli bin/pm), over HTTP to one server that
+// holds every repo's board (DD-004, DD-006). Only the transport, the board lookup and the commands
+// that ran a local server differ from 0.x. Differences in output are listed in DD-021.
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
+const BOARD_FILENAME = '.pm.json';
+const DEFAULT_URL = 'https://pm.godstemning.dev';
+
+// --- Board discovery: .pm.json {"board": "<slug>"}, found by walking up from cwd ---
+function findBoardFile(startDir = process.cwd()) {
+  let dir = resolve(startDir);
+  while (true) {
+    if (existsSync(join(dir, BOARD_FILENAME))) return join(dir, BOARD_FILENAME);
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+function readJson(path) {
+  if (!path) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'));
+  } catch { return null; }
+}
+
+// --- Machine config: ~/.config/pm/config.json {"url": "...", "token": "..."} ---
+// PM_URL and PM_TOKEN override it. XDG_CONFIG_HOME moves it, as for other tools.
+const USER_CONFIG_PATH = join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'pm', 'config.json');
+const userConfig = readJson(USER_CONFIG_PATH) || {};
+
+// --- Arg parser ---
+const args = process.argv.slice(2);
+const subcmd = args[0] || '';
+const positional = [];
+const flags = {};
+const BOOLEAN_FLAGS = new Set(['all', 'help', 'json', 'all-claims']);
+
+for (let i = 1; i < args.length; i++) {
+  if (args[i].startsWith('--')) {
+    const key = args[i].slice(2);
+    if (BOOLEAN_FLAGS.has(key)) {
+      flags[key] = 'true';
+    } else if (key === 'server') {
+      // --server <url> targets that server, as PM_URL does. Accept a full URL, or a scheme-less
+      // host:port / host (auto-prefixed http://). A bare positional is NOT consumed.
+      const next = args[i + 1];
+      if (next && !next.startsWith('--') && /^https?:\/\//.test(next)) {
+        flags[key] = args[++i];
+      } else if (next && !next.startsWith('--') && /^([\w-]+(\.[\w-]+)+|[\w.-]+:\d+)$/.test(next)) {
+        flags[key] = `http://${args[++i]}`;
+      } else {
+        flags[key] = 'true';
+      }
+    } else {
+      const val = args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[++i] : 'true';
+      flags[key] = val;
+    }
+  }
+  else {
+    positional.push(args[i]);
+  }
+}
+
+const serverFlagUrl = flags.server && flags.server !== 'true' ? flags.server : null;
+const BASE_URL = String(serverFlagUrl || process.env.PM_URL || userConfig.url || DEFAULT_URL).replace(/\/+$/, '');
+const TOKEN = process.env.PM_TOKEN || userConfig.token || null;
+const boardFile = findBoardFile();
+const BOARD = flags.board && flags.board !== 'true' ? flags.board : readJson(boardFile)?.board || null;
+
+// The board's config (name, stages, entityTypes, commands, knowledgeBase) comes from the server,
+// where 0.x read pm.config.json. loadConfig() fills it once per command.
+let config = null;
+
+// Commands that need no board.
+const NO_BOARD_COMMANDS = new Set(['init', '--help', 'update', 'health', 'serve', 'start', 'stop']);
+function requireBoard() {
+  if (!BOARD) {
+    process.stderr.write(
+      `No ${BOARD_FILENAME} found in any parent directory.\n` +
+      `Run "pm init <slug>" to create a board for this repo, or pass --board <slug>.\n`
+    );
+    process.exit(1);
+  }
+}
+
+// Flags that pick the server, the board or the output: never part of a request body.
+// 0.x sent --json in a PATCH (`pm project SPRINT-001 --json`); 1.x refuses unknown fields (DD-016).
+const TRANSPORT_FLAGS = new Set(['server', 'board', 'json']);
+function isRequestFlag(key) {
+  return !TRANSPORT_FLAGS.has(key) && key !== 'help';
+}
+function hasRequestFlags() {
+  return Object.keys(flags).some(isRequestFlag);
+}
+
+// 0.x's paths are /api/items, ...; 1.x has them per board under /api/boards/{slug}/items.
+function boardPath(path) {
+  if (!path.startsWith('/api/')) return path;
+  return `/api/boards/${encodeURIComponent(BOARD)}/${path.slice('/api/'.length)}`;
+}
+
+// --- Request helper (HTTP to the server, with the token on every write) ---
+async function api(method, path, body, { silent = false } = {}) {
+  let status, data;
+  try {
+    ({ status, data } = await httpJson(method, `${BASE_URL}${boardPath(path)}`, body));
+  } catch (err) {
+    process.stderr.write(`Failed: ${err.message}\nCannot reach the pm server at ${BASE_URL} (set PM_URL or "url" in ${USER_CONFIG_PATH}).\n`);
+    process.exit(1);
+  }
+  if (status < 200 || status >= 300) {
+    process.stderr.write(`Error ${status}: ${JSON.stringify(data)}\n`);
+    if (status === 401) {
+      process.stderr.write(`A write needs a token: set PM_TOKEN or "token" in ${USER_CONFIG_PATH}.\n`);
+    }
+    process.exit(1);
+  }
+  if (!silent && data !== undefined) process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+  return data;
+}
+
+function httpJson(method, url, body) {
+  return new Promise((resolveRequest, rejectRequest) => {
+    const parsed = new URL(url);
+    const payload = body ? JSON.stringify(body) : undefined;
+    const client = parsed.protocol === 'https:' ? https : http;
+    const write = method !== 'GET' && method !== 'HEAD';
+    const req = client.request(parsed, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        Connection: 'close',
+        'User-Agent': `pm/${VERSION}`,
+        ...(write && TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
+        ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {})
+      },
+      agent: false
+    }, (res) => {
+      let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { raw += chunk; });
+      res.on('end', () => {
+        let data;
+        if (raw) {
+          try { data = JSON.parse(raw); }
+          catch { data = raw; }
+        }
+        resolveRequest({ status: res.statusCode || 0, data });
+      });
+    });
+    req.on('error', rejectRequest);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function loadConfig() {
+  if (config || !BOARD) return config;
+  config = await api('GET', '/api/config', undefined, { silent: true });
+  return config;
+}
+
+// --- Knowledge base (DD-017): the server lists the queries, this machine runs them ---
+function runKnowledgeQuery(query) {
+  const kb = config?.knowledgeBase;
+  if (!kb || !kb.command) return null;
+  const escaped = query.replace(/"/g, '\\"');
+  let cmd = `${kb.command} "${escaped}"`;
+  if (kb.scope) cmd += ` -c ${kb.scope}`;
+  try {
+    return execSync(cmd, { timeout: 10000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch { return null; }
+}
+
+// --- List formatter ---
+// Terse "ID  title" output sorted oldest→newest so the most recent items
+// land at the bottom (closest to the prompt, survive tail-truncation).
+// --json prints raw unsorted JSON (back-compat for scripts).
+// Default limit 20; --limit N or --all override.
+const LIST_DEFAULT_LIMIT = 20;
+function printList(items) {
+  if (flags.json === 'true') {
+    process.stdout.write(JSON.stringify(items, null, 2) + '\n');
+    return;
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    process.stdout.write('(none)\n');
+    return;
+  }
+  const sortKey = (it) => it.updatedAt || it.createdAt || '';
+  const sorted = [...items].sort((a, b) => {
+    const av = sortKey(a);
+    const bv = sortKey(b);
+    return av < bv ? -1 : av > bv ? 1 : 0;
+  });
+  const all = flags.all === 'true';
+  const limit = flags.limit ? parseInt(flags.limit, 10) : LIST_DEFAULT_LIMIT;
+  let display = sorted;
+  let hidden = 0;
+  if (!all && Number.isFinite(limit) && limit > 0 && sorted.length > limit) {
+    hidden = sorted.length - limit;
+    display = sorted.slice(-limit);
+  }
+  if (hidden > 0) {
+    process.stdout.write(`… ${hidden} older hidden (use --all or --limit N)\n`);
+  }
+  const idWidth = Math.max(...display.map(it => String(it.id || '').length));
+  for (const it of display) {
+    const id = String(it.id || '').padEnd(idWidth);
+    const title = it.title || it.name || '(untitled)';
+    process.stdout.write(`${id}  ${title}\n`);
+  }
+}
+
+// --- Glossary ---
+// Terms are surfaced two ways, never by rewriting stored prose: `pm glossary`
+// dumps the whole vocabulary (20-40 entries — an agent reads it once and holds
+// it), and `pm get` footnotes the terms it just printed.
+async function fetchTerms() {
+  const items = await api('GET', '/api/items?type=term', undefined, { silent: true });
+  return Array.isArray(items) ? items : [];
+}
+
+function printGlossary(terms) {
+  if (flags.json === 'true') {
+    process.stdout.write(JSON.stringify(terms, null, 2) + '\n');
+    return;
+  }
+  if (terms.length === 0) {
+    process.stdout.write('(no terms yet — pm create term "the-word" --body "One sentence.")\n');
+    return;
+  }
+  const index = buildTermIndex(terms);
+  const sorted = [...terms].sort((a, b) => String(a.title).localeCompare(String(b.title)));
+  const idWidth = Math.max(...sorted.map(t => String(t.id || '').length));
+  const titleWidth = Math.max(...sorted.map(t => String(t.title || '').length));
+  for (const t of sorted) {
+    const meta = index.terms.get(t.id);
+    const gloss = meta?.kind === 'signpost'
+      ? `⚠ ${signpostHint(meta.targetTitles)}`
+      : truncate(String(t.body || '').split('\n').find(l => l.trim()) || '(undefined)', 88);
+    process.stdout.write(
+      `${String(t.id).padEnd(idWidth)}  ${String(t.title).padEnd(titleWidth)}  ${gloss}\n`
+    );
+  }
+  for (const c of index.conflicts) {
+    process.stderr.write(`warning: ${describeConflict(c)}\n`);
+  }
+}
+
+// Terms mentioned in what `pm get` just printed. Written to stderr so stdout
+// stays pure JSON — agents pipe `pm get X | jq` and still see the footer.
+async function printGlossaryFooter(entity) {
+  if (!entity || typeof entity !== 'object') return;
+  const terms = await fetchTerms().catch(() => []);
+  if (terms.length === 0) return;
+  const scanned = [
+    entity.title || entity.name || '',
+    entity.body || entity.description || '',
+    ...(Array.isArray(entity.comments) ? entity.comments.map(c => c?.text || '') : [])
+  ].join('\n');
+  const index = buildTermIndex(terms);
+  const mentioned = firstMatchPerTerm(findTermMatches(scanned, index));
+  if (mentioned.length === 0) return;
+  const parts = mentioned.map(m =>
+    `${m.termId} ${m.title}${m.kind === 'signpost' ? ` (${signpostHint(m.targetTitles)})` : ''}`);
+  process.stderr.write(`\nGlossary: ${parts.join(' · ')}\n`);
+}
+
+// --- Sprint/project overview formatter ---
+// Progressive disclosure for agents: `pm project` prints a one-line-per-entity
+// overview (stage, open blockers, plan progress) instead of the full JSON dump
+// with every body/comment inlined. Drill down with `pm get <id>`; --json keeps
+// the raw detail for scripts.
+function truncate(str, len) {
+  const s = String(str || '').replace(/\s+/g, ' ').trim();
+  return s.length > len ? s.slice(0, len - 1) + '…' : s;
+}
+function printSprintOverview(detail) {
+  const out = [];
+  const { items = [], designs = [], plans = [], ...sprint } = detail;
+  out.push(`${sprint.id}  ${sprint.name}  (${sprint.status})`);
+  if (sprint.problemStatement) out.push(`Destination: ${truncate(sprint.problemStatement, 200)}`);
+
+  const itemsById = new Map(items.map(i => [i.id, i]));
+  // A blocker only matters while it isn't done; unknown ids (outside this
+  // sprint) are kept — we can't prove they're resolved.
+  const openBlockers = (it) => (it.blockedBy || []).filter(b => {
+    const dep = itemsById.get(b);
+    return !dep || dep.stage !== 'done';
+  });
+  const stageOrder = config?.stages || [];
+  const stageRank = (s) => {
+    const idx = stageOrder.indexOf(s);
+    return idx === -1 ? stageOrder.length : idx;
+  };
+
+  if (items.length) {
+    const done = items.filter(i => i.stage === 'done').length;
+    out.push('', `Items (${done}/${items.length} done):`);
+    const sorted = [...items].sort((a, b) =>
+      stageRank(a.stage) - stageRank(b.stage) || String(a.id).localeCompare(b.id));
+    const idWidth = Math.max(...sorted.map(i => String(i.id).length));
+    const stageWidth = Math.max(...sorted.map(i => String(i.stage || '?').length));
+    for (const it of sorted) {
+      const cols = [
+        `  ${String(it.id).padEnd(idWidth)}`,
+        String(it.stage || '?').padEnd(stageWidth),
+        truncate(it.title, 76)
+      ];
+      if (it.priority) cols.push(`[${it.priority}]`);
+      const blockers = openBlockers(it);
+      if (blockers.length && it.stage !== 'done') cols.push(`⊘ blocked by ${blockers.join(', ')}`);
+      if (it.assignee && it.stage !== 'done') cols.push(`⚑ ${it.assignee}`);
+      out.push(cols.join('  '));
+    }
+  }
+
+  if (designs.length) {
+    out.push('', `Designs (${designs.length}):`);
+    for (const d of designs) out.push(`  ${d.id}  ${truncate(d.title, 76)}`);
+  }
+  if (plans.length) {
+    out.push('', `Plans (${plans.length}):`);
+    for (const p of plans) {
+      const tasks = p.tasks || [];
+      const progress = tasks.length ? `  tasks ${tasks.filter(t => t.passes).length}/${tasks.length}` : '';
+      out.push(`  ${p.id}  ${truncate(p.title, 76)}${progress}`);
+    }
+  }
+  if (sprint.comments?.length) out.push('', `Comments: ${sprint.comments.length} (see --json)`);
+  if (sprint.body) out.push(`Project doc: ${sprint.body.length} chars (see --json)`);
+  out.push('', `Drill down: pm get <id> · full JSON: pm project ${sprint.id} --json`);
+  process.stdout.write(out.join('\n') + '\n');
+}
+
+// --- List type resolution ---
+// Canonical list types: 'sdd', 'plan', 'sprint', plus per-config item types
+// (e.g. 'issue', 'decision', 'concern', 'gap'). The resolver accepts prefix
+// codes, labels, singulars, plurals, mixed case — anything an agent might
+// reasonably guess. Only the canonical positional form is documented; the
+// rest "just work."
+const RESERVED_LIST_TYPES = {
+  sdd: 'sdd', sdds: 'sdd', design: 'sdd', designs: 'sdd',
+  plan: 'plan', plans: 'plan',
+  sprint: 'sprint', sprints: 'sprint', project: 'sprint', projects: 'sprint'
+};
+// Structural entities have dedicated commands and their own API collections.
+const STRUCTURAL_PREFIXES = ['SDD', 'PLAN', 'SPRINT', 'TASK', 'MILESTONE'];
+
+// The server answers config with the board's types merged over 0.x's defaults
+// (BoardConfig), so the CLI resolves the same union the server mints ids from.
+const DEFAULT_ENTITY_TYPES = {
+  SB: { label: 'Issue' }, DD: { label: 'Decision' }, DC: { label: 'Concern' },
+  GAP: { label: 'Gap' }, TERM: { label: 'Term' }
+};
+function itemEntityTypes() {
+  const merged = { ...DEFAULT_ENTITY_TYPES, ...(config?.entityTypes || {}) };
+  for (const prefix of STRUCTURAL_PREFIXES) delete merged[prefix];
+  return merged;
+}
+
+function itemPrefixes() {
+  return Object.keys(itemEntityTypes());
+}
+
+function buildTypeAliases() {
+  const aliases = { ...RESERVED_LIST_TYPES };
+  for (const [prefix, def] of Object.entries(itemEntityTypes())) {
+    const label = String(def.label || prefix).toLowerCase();
+    aliases[prefix.toLowerCase()] = label;
+    aliases[label] = label;
+    aliases[label.endsWith('s') ? label : label + 's'] = label;
+  }
+  return aliases;
+}
+// Words that are almost certainly a mistyped subcommand, not a title.
+// `pm sdd list` used to create an SDD literally titled "list".
+const COMMAND_WORD_TITLES = /^(list|ls|get|show|view|open|create|new|delete|remove|rm|update|patch|edit|help|status)$/i;
+
+function rejectCommandWordTitle(title, typeName) {
+  if (!COMMAND_WORD_TITLES.test(title)) return;
+  process.stderr.write(
+    `"${title}" looks like a subcommand, not a title — refusing to create a ${typeName} named "${title}".\n` +
+    `  To list:   pm list ${typeName}   (or: pm ${typeName} list)\n` +
+    `  To create: pm ${typeName} "a real title"\n`);
+  process.exit(1);
+}
+
+function resolveListType(input) {
+  if (!input) return { canonical: null };
+  const aliases = buildTypeAliases();
+  const canonical = aliases[String(input).toLowerCase()];
+  if (!canonical) {
+    const known = [...new Set(Object.values(aliases))].sort().join(', ');
+    process.stderr.write(`Unknown list type "${input}". Known: ${known}\n`);
+    process.exit(1);
+  }
+  return { canonical };
+}
+async function fetchListByType(typeArg) {
+  const { canonical } = resolveListType(typeArg);
+  if (canonical === 'sdd') return api('GET', '/api/designs', undefined, { silent: true });
+  if (canonical === 'plan') {
+    const path = flags.sprint ? `/api/plans?sprintId=${encodeURIComponent(flags.sprint)}` : '/api/plans';
+    return api('GET', path, undefined, { silent: true });
+  }
+  if (canonical === 'sprint') return api('GET', '/api/sprints', undefined, { silent: true });
+  // Items: filter by canonical type label if specified
+  const params = new URLSearchParams();
+  if (canonical) params.set('type', canonical);
+  if (flags.stage) params.set('stage', flags.stage);
+  if (flags.priority) params.set('priority', flags.priority);
+  if (flags.sprint) params.set('sprintId', flags.sprint);
+  if (flags.frontier === 'true') params.set('frontier', 'true');
+  if (flags['all-claims'] === 'true') params.set('allClaims', 'true');
+  const qs = params.toString();
+  return api('GET', `/api/items${qs ? '?' + qs : ''}`, undefined, { silent: true });
+}
+
+// --- ID prefix routing ---
+function routeById(id) {
+  const upper = id.toUpperCase();
+  for (const prefix of itemPrefixes()) {
+    if (upper.startsWith(`${prefix}-`)) return `/api/items/${id}`;
+  }
+  if (upper.startsWith('PLAN-')) return `/api/plans/${id}`;
+  if (upper.startsWith('SDD-')) return `/api/designs/${id}`;
+  if (upper.startsWith('SPRINT-')) return `/api/sprints/${id}`;
+  if (upper.startsWith('TASK-')) {
+    process.stderr.write('Tasks live under plans — use: pm get PLAN-NNN\n');
+    process.exit(1);
+  }
+  process.stderr.write(`Unknown ID prefix: ${id}\n`);
+  process.exit(1);
+}
+
+function commentRoute(id) {
+  const upper = id.toUpperCase();
+  for (const prefix of itemPrefixes()) {
+    if (upper.startsWith(`${prefix}-`)) return `/api/items/${id}/comments`;
+  }
+  if (upper.startsWith('SDD-')) return `/api/designs/${id}/comments`;
+  if (upper.startsWith('PLAN-')) return `/api/plans/${id}/comments`;
+  if (upper.startsWith('SPRINT-')) return `/api/sprints/${id}/comments`;
+  process.stderr.write(`Comments not supported for prefix: ${id}\n`);
+  process.exit(1);
+}
+
+// --- Generic @file / - / inline expansion for string args ---
+async function expandFileArg(val, label = 'input') {
+  if (val == null || val === '') return val;
+  if (val === '-') {
+    const chunks = [];
+    for await (const chunk of process.stdin) chunks.push(chunk);
+    return Buffer.concat(chunks).toString().trim();
+  }
+  if (typeof val === 'string' && val.startsWith('@')) {
+    const filePath = val.slice(1);
+    try {
+      return readFileSync(filePath, 'utf-8');
+    } catch (e) {
+      process.stderr.write(`Failed to read ${label} file ${filePath}: ${e.message}\n`);
+      process.exit(1);
+    }
+  }
+  return val;
+}
+
+// --- Body resolution (inline string, @file, or - for stdin) ---
+async function resolveBody() {
+  if (!flags.body) return;
+  flags.body = await expandFileArg(flags.body, 'body');
+}
+
+// --- Item body builder ---
+function buildItemBody(type, title) {
+  const body = { type, title };
+  if (flags.priority) body.priority = flags.priority;
+  if (flags.body) body.body = flags.body;
+  if (flags.pillar) body.pillar = flags.pillar;
+  if (flags.sprint) body.sprintId = flags.sprint;
+  if (flags.files) body.affectedFiles = flags.files.split(',');
+  if (flags.blockedBy) body.blockedBy = flags.blockedBy.split(',');
+  return body;
+}
+
+// --- Resolve @file references for JSON array flags (e.g. --tasks @file.json) ---
+function resolveJsonFlag(key) {
+  if (!flags[key]) return;
+  let raw = flags[key];
+  if (typeof raw === 'string' && raw.startsWith('@')) {
+    const filePath = raw.slice(1);
+    try {
+      raw = readFileSync(filePath, 'utf-8');
+    } catch (e) {
+      process.stderr.write(`Failed to read ${key} file ${filePath}: ${e.message}\n`);
+      process.exit(1);
+    }
+  }
+  if (typeof raw === 'string') {
+    try {
+      flags[key] = JSON.parse(raw);
+    } catch (e) {
+      process.stderr.write(`Failed to parse ${key} as JSON: ${e.message}\n`);
+      process.exit(1);
+    }
+  }
+}
+
+// --- Generic patch body builder (forwards all flags, maps known aliases) ---
+function buildPatchBody() {
+  resolveJsonFlag('tasks');
+  const body = {};
+  for (const [key, val] of Object.entries(flags)) {
+    if (!isRequestFlag(key)) continue;
+    if (key === 'sprint') body.sprintId = val;
+    else if (key === 'files') body.affectedFiles = val.split(',');
+    else if (key === 'items') body.itemIds = val.split(',');
+    else if (key === 'related') body.related = val === '' ? [] : val.split(',');
+    else if (key === 'blockedBy') body.blockedBy = val === '' ? [] : val.split(',');
+    else body[key] = val;
+  }
+  return body;
+}
+
+// --- Help ---
+const usage = () => `${config?.name || 'PM Board'} — CLI
+
+Usage: pm <command> [args] [--flags]
+
+Setup:
+  init <slug> [--name N]         Create the board <slug> on the server (or link to it if it
+                                 exists) and write .pm.json in the current directory
+  update                         Update pm to the latest 1.x version
+
+Commands:
+  health                         Server health check
+  get <id> [--brief]             Get item by ID (--brief: metadata only, no body/comments)
+  list [<type>] [--stage S] [--priority P] [--sprint ID] [--frontier] [--limit N] [--all] [--json]
+                                 List entities — terse "ID  title", sorted
+                                 oldest→newest, default 20. <type> is one of:
+                                 sdd, plan, sprint, issue, decision, concern, gap, term.
+                                 Omit <type> to list all items.
+                                 --frontier: not done, unblocked, not claimed
+                                 (--all-claims: include claimed tickets too)
+  claim <id> --as "label"        Claim a ticket for this session; fails if another
+                                 session holds a live claim (claims expire after
+                                 claimTtlHours, default 4). Closing releases it.
+  release <id>                   Release a claim without closing the ticket
+  create <type> "title" [--priority P] [--body B] [--pillar P] [--sprint ID] [--files f1,f2]
+                                 Create a new item
+  patch <id> [--key value ...]   Update any field on an item/design/plan
+  comment <id> "text" [--author A]
+                                 Add comment (default author: claude)
+  archive <id> [<id2>...]        Archive items by ID
+  sweep [--days N]               Auto-archive done items (default: 1 day)
+
+Glossary (one word, one meaning):
+  glossary [--json]              Print every term — read it once, hold it. Words
+                                 with no definition are signposts: they list the
+                                 unambiguous words to use instead.
+  create term "the-word" --body "One sentence."
+  patch TERM-001 --aliases the-words,the-wording
+                                 Explicit inflections only — never stemming, and
+                                 an alias may never be an ambiguous word itself.
+                                 (pm get footnotes the terms it just printed.)
+
+  Common patch fields:
+    --stage S       Move to stage
+    --body TEXT     Set body (or --body @file.md, --body -)
+    --priority P    Set priority
+    --title T       Rename
+    Fields vary by entity type. Unknown fields are rejected by the server.
+
+Shorthands (get by ID or create):
+  issue [<id>|"title"]           Get or create issue
+  gap [<id>|"title"]             Get or create gap
+  decision [<id>|"title"]        Get or create decision
+  concern [<id>|"title"]         Get or create concern
+  sdd [<id>|"title"]             Get or create SDD [--body B] [--items IDs] [--sprint ID]
+
+SDD:
+  sdd create "title" [--body B] [--items IDs] [--sprint SPRINT-NNN]
+
+Plan / Task:
+  plan <id>                      Get plan by ID
+  plan create < plan.json        Create plan from JSON on stdin
+  next-task <plan-id>            Get next unblocked task for a plan
+  task-done <plan-id> <task-id> "note" | @file.md | -
+                                 Mark task done with progress note (--body-style
+                                 @file.md / - stdin supported)
+  task-update <plan-id> <task-id> [--status S] [--passes true|false]
+                                 [--note N | @file.md | -]
+  plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]
+
+Project (alias: sprint — ids stay SPRINT-NNN):
+  project [id] [--json]          Project overview: items w/ stage + open blockers,
+                                 designs, plan progress (--json: full detail dump)
+  project create "name" [--destination "where this arrives"] [--body "markdown doc"]
+                                 Create a new project (status: active)
+  project <SPRINT-id> [--name N] [--destination D] [--body B] [--status S]
+                                 Patch project (--body = markdown doc: decisions log, out-of-scope)
+
+Exploration / Context:
+  explore <sprint-id>            Generate sprint dossier
+  suggest <sprint-id>            Get suggested items for sprint
+  prompt <type> <id>             Generate scoped prompt (type: item|sdd|plan)
+  review <type> <id>             Generate review prompt (type: sdd|plan)
+
+Board and server:
+  --board <slug>                 Use this board, not the one in .pm.json
+  --server <url>                 Use this server, as PM_URL does
+
+Environment:
+  PM_URL                         Server URL (default: ${DEFAULT_URL}, or "url" in ~/.config/pm/config.json)
+  PM_TOKEN                       Token for writes (or "token" in ~/.config/pm/config.json)
+`;
+
+// --- Init command ---
+// 0.x wrote pm.config.json and a data folder. 1.x creates the board on the server and writes
+// .pm.json, which names it. A board that exists is linked, so a second clone or a repo whose board
+// was imported needs only `pm init <slug>`.
+async function doInit() {
+  const slug = positional[0];
+  if (!slug) {
+    process.stderr.write('Usage: pm init <slug> [--name "Board name"]\n' +
+      'The slug is the board\'s URL part: lowercase letters, digits and dashes.\n');
+    process.exit(1);
+  }
+  const targetDir = process.cwd();
+  const boardPathOnDisk = join(targetDir, BOARD_FILENAME);
+  if (existsSync(boardPathOnDisk)) {
+    process.stderr.write(`${BOARD_FILENAME} already exists in ${targetDir}\n`);
+    process.exit(1);
+  }
+  const dirName = basename(targetDir) || 'My Project';
+  const name = flags.name && flags.name !== 'true'
+    ? flags.name
+    : dirName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  let result;
+  try {
+    result = await httpJson('POST', `${BASE_URL}/api/boards`, { slug, name });
+  } catch (err) {
+    process.stderr.write(`Failed: ${err.message}\nCannot reach the pm server at ${BASE_URL}.\n`);
+    process.exit(1);
+  }
+  if (result.status === 201) {
+    process.stdout.write(`Created board "${result.data.name}" (${slug}) on ${BASE_URL}\n`);
+  } else if (result.status === 409) {
+    process.stdout.write(`Board ${slug} already exists on ${BASE_URL}: linked to it\n`);
+  } else {
+    process.stderr.write(`Error ${result.status}: ${JSON.stringify(result.data)}\n`);
+    if (result.status === 401) {
+      process.stderr.write(`Creating a board needs a token: set PM_TOKEN or "token" in ${USER_CONFIG_PATH}.\n`);
+    }
+    process.exit(1);
+  }
+  writeFileSync(boardPathOnDisk, JSON.stringify({ board: slug }, null, 2) + '\n');
+  process.stdout.write(`Wrote ${BOARD_FILENAME}. Commit it, so every clone and worktree uses this board.\n`);
+  process.stdout.write(`Dashboard: ${BASE_URL}/${slug}\n`);
+}
+
+// --- Commands of 0.x's local server ---
+function doGone(cmd) {
+  process.stdout.write(`pm ${cmd} is gone in pm 1.x: the board lives on ${BASE_URL}, ` +
+    `and its dashboard is at ${BASE_URL}/${BOARD || '<board>'}. Nothing to start or stop.\n`);
+}
+
+// --- Self-update command ---
+async function doUpdate() {
+  process.stdout.write('Updating @terjeballestad/pm-board-cli (1.x line)...\n');
+  try {
+    execSync('npm install -g @terjeballestad/pm-board-cli@1', { stdio: 'inherit' });
+    const newPkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
+    process.stdout.write(`Updated to v${newPkg.version}\n`);
+  } catch (e) {
+    process.stderr.write(`Update failed: ${e.message}\n`);
+    process.exit(1);
+  }
+}
+
+// --- Per-command help ---
+const patchHelp = () => `Usage: pm patch <id> [--key value ...]
+
+Update any field on an item, design, or plan.
+
+Items (SB, DD, DC, GAP, ...):
+  --title T            Rename
+  --body TEXT           Set body (--body @file.md to read from file, --body - for stdin)
+  --stage S             Move to stage (${config?.stages?.join(', ') || 'inbox, exploring, sdd, planned, done'})
+  --priority P          Set priority (low, medium, high, critical)
+  --pillar P            Set design pillar
+  --sprint SPRINT-NNN   Assign to sprint
+  --files f1,f2         Set affected files (comma-separated)
+  --related IDs         Set related IDs (comma-separated, e.g. SDD-060,DD-042)
+  --blockedBy IDs       Set blocking edges (comma-separated; '' clears). Items whose
+                        blockers are all done/archived show in "pm list --frontier"
+  --assignee LABEL      Force-set/override a claim ('' clears). Normal claiming
+                        goes through "pm claim <id> --as LABEL" (conflict-checked)
+
+Designs (SDD):
+  --title T             Rename
+  --body TEXT           Set body (--body @file.md, --body -)
+  --stage S             Move to stage
+  --items IDs           Set linked item IDs (comma-separated)
+  --sprint SPRINT-NNN   Assign to sprint
+
+Plans (PLAN):
+  --title T             Rename
+  --stage S             Move to stage
+  --context TEXT        Set plan context
+  --sprint SPRINT-NNN   Assign to sprint
+  --tasks @file.json    Replace all tasks from JSON file
+
+Sprints (SPRINT):
+  --name N              Rename
+  --status S            Set status (active, completed)
+`;
+
+const COMMAND_HELP = { patch: patchHelp };
+
+// --- Command dispatch ---
+// Help names the board and its stages when the server answers; it never fails for want of one.
+async function loadConfigForHelp() {
+  if (!BOARD) return;
+  try {
+    const r = await httpJson('GET', `${BASE_URL}${boardPath('/api/config')}`);
+    if (r.status === 200) config = r.data;
+  } catch { /* help works offline */ }
+}
+
+async function main() {
+  if (!subcmd || subcmd === '--help' || flags.help === 'true') {
+    await loadConfigForHelp();
+    const help = flags.help === 'true' && COMMAND_HELP[subcmd];
+    process.stdout.write(help ? help() : usage());
+    return;
+  }
+
+  if (!NO_BOARD_COMMANDS.has(subcmd)) {
+    requireBoard();
+    await loadConfig();
+  }
+
+  switch (subcmd) {
+    case 'init':
+      await doInit();
+      break;
+
+    case 'serve':
+    case 'start':
+    case 'stop':
+      doGone(subcmd);
+      break;
+
+    case 'update':
+      await doUpdate();
+      break;
+
+    case 'health': {
+      // 0.x answered {status, version, project}. The 1.x server answers {ok}; the CLI adds its
+      // own version and the board's name, so the shape stays 0.x's.
+      const server = await httpJson('GET', `${BASE_URL}/api/health`).catch((err) => {
+        process.stderr.write(`Failed: ${err.message}\nCannot reach the pm server at ${BASE_URL}.\n`);
+        process.exit(1);
+      });
+      if (server.status !== 200 || server.data?.ok !== true) {
+        process.stderr.write(`Error ${server.status}: ${JSON.stringify(server.data)}\n`);
+        process.exit(1);
+      }
+      const out = { status: 'ok', version: VERSION };
+      if (BOARD) out.project = (await loadConfig())?.name;
+      process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+      break;
+    }
+
+    case 'get': {
+      const id = positional[0];
+      if (!id) { process.stderr.write('Usage: pm get <id>\n'); process.exit(1); }
+      if (flags.brief === 'true') {
+        // Metadata-only view: everything except the large free-text fields,
+        // with size hints so agents know when a full `pm get` is worth it.
+        const entity = await api('GET', routeById(id), undefined, { silent: true });
+        const { body, comments, ...rest } = entity;
+        if (body) rest.bodyChars = body.length;
+        if (comments?.length) rest.commentCount = comments.length;
+        process.stdout.write(JSON.stringify(rest, null, 2) + '\n');
+      } else {
+        const entity = await api('GET', routeById(id), undefined, { silent: true });
+        process.stdout.write(JSON.stringify(entity, null, 2) + '\n');
+        await printGlossaryFooter(entity);
+      }
+      break;
+    }
+
+    case 'glossary': {
+      // Deliberately NOT a get-or-create shorthand like `pm issue`/`pm decision`:
+      // for a curated glossary, `pm term merje` silently minting junk is a bad
+      // trade. Lookup is `pm get TERM-001`; creation is `pm create term "word"`.
+      printGlossary(await fetchTerms());
+      break;
+    }
+
+    case 'list': {
+      // Canonical: pm list [<type>] [filters]
+      // Type comes from positional[0] or --type flag (back-compat).
+      const typeArg = positional[0] || flags.type;
+      const items = await fetchListByType(typeArg);
+      printList(items);
+      break;
+    }
+
+    case 'create': {
+      const type = positional[0];
+      const title = positional[1];
+      if (!type || !title) { process.stderr.write('Usage: pm create <type> "title"\n'); process.exit(1); }
+      // Reserved entity types have dedicated creation commands — rejecting these
+      // prevents creating orphaned items with reserved prefixes (e.g. SPRINT-N
+      // items that aren't real sprints).
+      const RESERVED = { sprint: 'pm sprint create "name"', sdd: 'pm sdd create "title"', design: 'pm sdd create "title"', plan: 'pm plan create < plan.json', task: 'pm task-update <plan-id> <task-id>', milestone: 'milestones have no CLI creation yet' };
+      const reservedHint = RESERVED[type.toLowerCase()];
+      if (reservedHint) {
+        process.stderr.write(`"${type}" is not a generic item type. Use: ${reservedHint}\n`);
+        process.exit(1);
+      }
+      await resolveBody();
+      await api('POST', '/api/items', buildItemBody(type, title));
+      break;
+    }
+
+    case 'patch': {
+      const id = positional[0];
+      if (!id) { process.stderr.write('Usage: pm patch <id> [--key value ...]\n'); process.exit(1); }
+      await resolveBody();
+      await api('PATCH', routeById(id), buildPatchBody());
+      break;
+    }
+
+    case 'comment': {
+      const id = positional[0];
+      const text = positional[1];
+      if (!id || !text) { process.stderr.write('Usage: pm comment <id> "text" [--author A]\n'); process.exit(1); }
+      const path = commentRoute(id);
+      await api('POST', path, { text, author: flags.author || 'claude' });
+      break;
+    }
+
+    case 'claim': {
+      const id = positional[0];
+      if (!id) { process.stderr.write('Usage: pm claim <id> --as "session label"\n'); process.exit(1); }
+      const assignee = flags.as || process.env.CLAUDE_SESSION_ID;
+      if (!assignee) {
+        process.stderr.write('Usage: pm claim <id> --as "session label"\n' +
+          'A claim needs an assignee label (who is working this ticket).\n');
+        process.exit(1);
+      }
+      await api('POST', `/api/items/${encodeURIComponent(id)}/claim`, { assignee });
+      break;
+    }
+
+    case 'release': {
+      const id = positional[0];
+      if (!id) { process.stderr.write('Usage: pm release <id>\n'); process.exit(1); }
+      await api('POST', `/api/items/${encodeURIComponent(id)}/release`, {});
+      break;
+    }
+
+    case 'archive': {
+      if (positional.length === 0) { process.stderr.write('Usage: pm archive <id> [<id2>...]\n'); process.exit(1); }
+      await api('POST', '/api/items/archive', { ids: positional });
+      break;
+    }
+
+    case 'sweep': {
+      const days = flags.days ? parseInt(flags.days, 10) : 1;
+      await api('POST', '/api/items/archive/sweep', { days });
+      break;
+    }
+
+    case 'next-task': {
+      const planId = positional[0];
+      if (!planId) { process.stderr.write('Usage: pm next-task <plan-id>\n'); process.exit(1); }
+      await api('GET', `/api/plans/${planId}/next-task`);
+      break;
+    }
+
+    case 'task-done': {
+      const planId = positional[0];
+      const taskId = positional[1];
+      let note = positional[2];
+      if (!planId || !taskId || !note) {
+        process.stderr.write('Usage: pm task-done <plan-id> <task-id> "progress note" | @file.md | -\n');
+        process.exit(1);
+      }
+      note = await expandFileArg(note, 'note');
+      await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, {
+        passes: true, status: 'done', progressNote: note
+      });
+      break;
+    }
+
+    case 'sdd':
+    case 'design': {
+      const action = positional[0];
+      if (action === 'list') {
+        printList(await fetchListByType('sdd'));
+        break;
+      }
+      if (action === 'create') {
+        const title = positional[1];
+        if (!title) { process.stderr.write('Usage: pm sdd create "title" [--body B] [--items IDs] [--sprint ID]\n'); process.exit(1); }
+        await resolveBody();
+        const body = { title };
+        if (flags.body) body.body = flags.body;
+        if (flags.items) body.itemIds = flags.items.split(',');
+        if (flags.sprint) body.sprintId = flags.sprint;
+        await api('POST', '/api/designs', body);
+      } else if (action && /^SDD-\d+$/i.test(action)) {
+        if (hasRequestFlags()) {
+          await resolveBody();
+          await api('PATCH', `/api/designs/${action}`, buildPatchBody());
+        } else {
+          await api('GET', `/api/designs/${action}`);
+        }
+      } else if (action) {
+        rejectCommandWordTitle(action, 'sdd');
+        await resolveBody();
+        const body = { title: action };
+        if (flags.body) body.body = flags.body;
+        if (flags.items) body.itemIds = flags.items.split(',');
+        if (flags.sprint) body.sprintId = flags.sprint;
+        await api('POST', '/api/designs', body);
+      } else {
+        process.stderr.write('Usage: pm sdd <SDD-id or "title"> | pm sdd create "title"\n');
+        process.exit(1);
+      }
+      break;
+    }
+
+    case 'task-update': {
+      const planId = positional[0];
+      const taskId = positional[1];
+      if (!planId || !taskId) {
+        process.stderr.write('Usage: pm task-update <plan-id> <task-id> [--status S] [--passes true|false] [--note N | @file.md | -]\n');
+        process.exit(1);
+      }
+      const body = {};
+      if (flags.status) body.status = flags.status;
+      if (flags.passes) body.passes = flags.passes === 'true';
+      if (flags.note) body.progressNote = await expandFileArg(flags.note, 'note');
+      if (flags.description) body.description = await expandFileArg(flags.description, 'description');
+      if (flags.steps) {
+        try { body.steps = JSON.parse(flags.steps); }
+        catch (e) { process.stderr.write(`Invalid JSON for --steps: ${e.message}\n`); process.exit(1); }
+      }
+      if (flags.verification) body.verification = flags.verification;
+      await api('PATCH', `/api/plans/${planId}/tasks/${taskId}`, body);
+      break;
+    }
+
+    case 'plan-update': {
+      const planId = positional[0];
+      if (!planId) {
+        process.stderr.write('Usage: pm plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]\n');
+        process.exit(1);
+      }
+      const body = {};
+      if (flags.title) body.title = flags.title;
+      if (flags.stage) body.stage = flags.stage;
+      if (flags.tasks) {
+        const tasksArg = flags.tasks;
+        if (tasksArg.startsWith('@')) {
+          const filePath = tasksArg.slice(1);
+          try {
+            const raw = readFileSync(filePath, 'utf8');
+            body.tasks = JSON.parse(raw);
+          } catch (e) {
+            process.stderr.write(`Failed to read tasks file ${filePath}: ${e.message}\n`);
+            process.exit(1);
+          }
+        } else {
+          try { body.tasks = JSON.parse(tasksArg); }
+          catch (e) { process.stderr.write(`Invalid JSON for --tasks: ${e.message}\n`); process.exit(1); }
+        }
+      }
+      await api('PATCH', `/api/plans/${planId}`, body);
+      break;
+    }
+
+    case 'plan': {
+      const action = positional[0];
+      if (action === 'list') {
+        printList(await fetchListByType('plan'));
+        break;
+      }
+      if (action === 'create') {
+        const chunks = [];
+        for await (const chunk of process.stdin) chunks.push(chunk);
+        const input = Buffer.concat(chunks).toString().trim();
+        if (!input) {
+          process.stderr.write('Usage: pm plan create < plan.json\n');
+          process.exit(1);
+        }
+        let planData;
+        try { planData = JSON.parse(input); }
+        catch (e) { process.stderr.write(`Invalid JSON: ${e.message}\n`); process.exit(1); }
+        await api('POST', '/api/plans', planData);
+      } else if (action && /^PLAN-\d+$/i.test(action)) {
+        await api('GET', `/api/plans/${action}`);
+      } else {
+        process.stderr.write('Usage: pm plan <PLAN-id> | pm plan create < plan.json\n');
+        process.exit(1);
+      }
+      break;
+    }
+
+    // Undocumented aliases routed through the unified list handler.
+    case 'sdds':
+    case 'designs':
+    case 'plans':
+    case 'sprints': {
+      const items = await fetchListByType(subcmd);
+      printList(items);
+      break;
+    }
+
+    case 'project':
+    case 'sprint': {
+      const action = positional[0];
+      if (action === 'list') {
+        printList(await fetchListByType('sprint'));
+        break;
+      }
+      // pm project create "name" [--destination "..."] [--body "markdown doc"]
+      if (action === 'create') {
+        const name = positional[1];
+        if (!name) { process.stderr.write('Usage: pm project create "name" [--destination "..."] [--body "markdown doc"]\n'); process.exit(1); }
+        await resolveBody();
+        const body = { name };
+        if (flags.destination) body.problemStatement = flags.destination;
+        if (flags['problem-statement']) body.problemStatement = flags['problem-statement'];
+        // --body is the project's markdown doc (decisions log, out-of-scope, …)
+        if (flags.body) body.body = flags.body;
+        await api('POST', '/api/sprints', body);
+        break;
+      }
+      // pm project SPRINT-NNN --name "..." (patch shorthand)
+      if (action && /^SPRINT-\d+$/i.test(action) && hasRequestFlags()) {
+        await resolveBody();
+        const patchBody = {};
+        for (const [key, val] of Object.entries(flags)) {
+          if (!isRequestFlag(key)) continue;
+          if (key === 'destination' || key === 'problem-statement') patchBody.problemStatement = val;
+          else patchBody[key] = val;
+        }
+        await api('PATCH', `/api/sprints/${action}`, patchBody);
+        break;
+      }
+      // pm sprint [id] — get sprint detail (default: active sprint).
+      // Compact overview by default; --json for the full dump.
+      let sprintId = action;
+      if (!sprintId) {
+        const sprints = await api('GET', '/api/sprints', undefined, { silent: true });
+        const active = sprints.findLast(s => s.status === 'active');
+        if (!active) { process.stderr.write('No active sprint found\n'); process.exit(1); }
+        sprintId = active.id;
+      }
+      const detail = await api('GET', `/api/sprints/${sprintId}`, undefined, { silent: true });
+      if (flags.json === 'true') process.stdout.write(JSON.stringify(detail, null, 2) + '\n');
+      else printSprintOverview(detail);
+      break;
+    }
+
+    case 'explore': {
+      const sprintId = positional[0];
+      if (!sprintId) { process.stderr.write('Usage: pm explore <sprint-id>\n'); process.exit(1); }
+      await api('POST', `/api/sprints/${sprintId}/explore`);
+      break;
+    }
+
+    case 'suggest': {
+      const sprintId = positional[0];
+      if (!sprintId) { process.stderr.write('Usage: pm suggest <sprint-id>\n'); process.exit(1); }
+      await api('POST', `/api/sprints/${sprintId}/suggest`);
+      break;
+    }
+
+    case 'prompt': {
+      const entityType = positional[0];
+      const entityId = positional[1];
+      if (!entityType || !entityId) { process.stderr.write('Usage: pm prompt <type> <id>\n'); process.exit(1); }
+      const answer = await api('POST', '/api/context/prompt', { entityType, entityId }, { silent: true });
+      process.stdout.write(JSON.stringify(appendPromptKnowledge(answer, runKnowledgeQuery), null, 2) + '\n');
+      break;
+    }
+
+    case 'review': {
+      const entityType = positional[0];
+      const entityId = positional[1];
+      if (!entityType || !entityId) { process.stderr.write('Usage: pm review <type> <id>\n'); process.exit(1); }
+      const answer = await api('POST', '/api/context/review', { entityType, entityId }, { silent: true });
+      process.stdout.write(JSON.stringify(appendReviewKnowledge(answer, runKnowledgeQuery), null, 2) + '\n');
+      break;
+    }
+
+    case 'issue':
+    case 'gap':
+    case 'decision':
+    case 'concern': {
+      const arg = positional[0];
+      if (!arg) { process.stderr.write(`Usage: pm ${subcmd} <id or "title">\n`); process.exit(1); }
+      if (arg === 'list') {
+        printList(await fetchListByType(subcmd));
+        break;
+      }
+      if (/^[A-Z]+-\d+$/i.test(arg)) {
+        if (hasRequestFlags()) {
+          await resolveBody();
+          await api('PATCH', routeById(arg), buildPatchBody());
+        } else {
+          await api('GET', routeById(arg));
+        }
+      } else {
+        rejectCommandWordTitle(arg, subcmd);
+        await resolveBody();
+        await api('POST', '/api/items', buildItemBody(subcmd, arg));
+      }
+      break;
+    }
+
+    default:
+      process.stderr.write(`Unknown command: ${subcmd}\nRun: pm --help\n`);
+      process.exit(1);
+  }
+}
+
+main();
