@@ -1,0 +1,6 @@
+$ pm update SB-001
+exit 2
+--- stdout
+--- stderr
+pm update installs the newest pm and takes no arguments.
+To change a record: pm patch <id> --field value

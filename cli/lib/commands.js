@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import { execSync } from 'child_process';
-import { appendPromptKnowledge, appendReviewKnowledge } from './knowledge-base.js';
+import { appendPromptKnowledge } from './knowledge-base.js';
 import {
   api, httpJson, flags, positional, state, usageError, hasRequestFlags, isRequestFlag, loadConfig,
   runKnowledgeQuery, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
@@ -136,7 +136,7 @@ const create = {
     // Reserved entity types have dedicated creation commands — rejecting these
     // prevents creating orphaned items with reserved prefixes (e.g. SPRINT-N
     // items that aren't real sprints).
-    const RESERVED = { sprint: 'pm sprint create "name"', sdd: 'pm sdd create "title"', design: 'pm sdd create "title"', plan: 'pm plan create < plan.json', task: 'pm task-update <plan-id> <task-id>', milestone: 'milestones have no CLI creation yet' };
+    const RESERVED = { sprint: 'pm project create "name"', sdd: 'pm sdd create "title"', design: 'pm sdd create "title"', plan: 'pm plan create < plan.json', task: 'pm task-update <plan-id> <task-id>', milestone: 'milestones have no CLI creation yet' };
     const reservedHint = RESERVED[type.toLowerCase()];
     if (reservedHint) usageError(`"${type}" is not a generic item type. Use: ${reservedHint}`);
     await resolveBody();
@@ -275,10 +275,10 @@ const plan = {
   name: 'plan', write: true, group: 'Plans and tasks',
   synopsis: 'plan <id> [--json]', usage: ['plan <PLAN-id> [--json]', 'plan create < plan.json', 'plan list [--sprint ID]'],
   summary: 'A plan\'s overview: one line per task, and the next task',
-  help: 'Shows a plan: its project and notes in short, one line per task with its status and open\nblockers, and the next task. pm get TASK-NNN reads one task in full; --json gives the whole\nplan. With create: a new plan from JSON on stdin:\n{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}',
+  help: 'Shows a plan: its project and notes in short, one line per task with its status and open\nblockers, and the next task. pm get TASK-NNN reads one task in full; --json gives the whole\nplan. pm patch PLAN-NNN changes its title, stage or tasks.\nWith create: a new plan from JSON on stdin:\n{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}',
   flags: ['sprint', 'all', 'limit', 'json'],
   flagHelp: [['--json', 'The whole plan, every task in full']],
-  examples: ['pm plan PLAN-003', 'pm get TASK-021', 'pm plan create < plan.json'],
+  examples: ['pm plan PLAN-003', 'pm get TASK-021', 'pm plan create < plan.json', 'pm patch PLAN-003 --stage done'],
   async run() {
     const action = positional[0];
     if (action === 'list') {
@@ -394,46 +394,11 @@ const taskDone = {
   },
 };
 
-const planUpdate = {
-  name: 'plan-update', write: true, group: 'Plans and tasks',
-  synopsis: 'plan-update <plan-id> [...]', usage: 'plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]',
-  summary: 'Rename a plan, move its stage, or replace its tasks',
-  flags: ['title', 'stage', 'tasks'],
-  flagHelp: [
-    ['--title T', 'Rename'],
-    ['--stage S', 'Move to stage'],
-    ['--tasks JSON', 'Replace every task (@file.json reads a file); keep a task by its id'],
-  ],
-  async run() {
-    const planId = positional[0];
-    if (!planId) usageError('Usage: pm plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]');
-    const body = {};
-    if (flags.title) body.title = flags.title;
-    if (flags.stage) body.stage = flags.stage;
-    if (flags.tasks) {
-      const tasksArg = flags.tasks;
-      if (tasksArg.startsWith('@')) {
-        const filePath = tasksArg.slice(1);
-        try {
-          const raw = readFileSync(filePath, 'utf8');
-          body.tasks = JSON.parse(raw);
-        } catch (e) {
-          process.stderr.write(`Failed to read tasks file ${filePath}: ${e.message}\n`);
-          process.exit(1);
-        }
-      } else {
-        try { body.tasks = JSON.parse(tasksArg); }
-        catch (e) { usageError(`Invalid JSON for --tasks: ${e.message}`); }
-      }
-    }
-    await patchRecord(`/api/plans/${planId}`, planId, body);
-  },
-};
-
 // --- projects ---
 
 const project = {
-  name: 'project', write: true, aliases: ['sprint'], group: 'Projects',
+  // `pm sprint` still works (the daily-plan skill calls it), but the help names only project (DD-015, DD-028).
+  name: 'project', write: true, hiddenAliases: ['sprint'], group: 'Projects',
   synopsis: 'project [<id>] [--json]',
   usage: ['project [<SPRINT-id>] [--json]', 'project create "name" [--destination D] [--body B]', 'project <SPRINT-id> [--name N] [--destination D] [--body B] [--status S]', 'project list'],
   summary: 'A project\'s overview (default: the active one), or create one',
@@ -498,7 +463,9 @@ const project = {
 // --- more ---
 
 const sdd = {
-  name: 'sdd', write: true, aliases: ['design'], group: 'More',
+  // Out of the help (DD-028): pm get, pm patch and pm list sdd read and change designs. It stays
+  // for create, and skills call it, as `pm design create` too.
+  name: 'sdd', write: true, aliases: ['design'], group: 'More', hidden: true,
   synopsis: 'sdd <id> | sdd "title"',
   usage: ['sdd <SDD-id> [--field value ...]', 'sdd create "title" [--body B] [--items IDs] [--sprint ID]', 'sdd "title"', 'sdd list'],
   summary: 'A design doc: get, create, or change one',
@@ -559,7 +526,8 @@ const shorthand = (name) => ({
   help: `With an id: shows it, or changes it when flags follow (as pm patch). With a title: creates\na ${name} (as pm create ${name}). With list: as pm list ${name}.`,
   flags: [...new Set(['priority', 'body', 'pillar', 'sprint', 'files', 'blockedBy', ...LIST_FLAGS])],
   fields: (pos) => /^[A-Z]+-\d+$/i.test(pos[0] || ''),
-  hidden: name !== 'issue',
+  // Out of the help (DD-028): pm create, pm get and pm patch do the same. Skills still call them.
+  hidden: true,
   async run() {
     const arg = positional[0];
     if (!arg) usageError(`Usage: pm ${name} <id or "title">`);
@@ -585,46 +553,34 @@ const issue = shorthand('issue');
 issue.synopsis = 'issue <id> | issue "title"';
 issue.summary = 'Get, change or create an issue (also: decision, concern, gap)';
 
-const sweep = {
-  name: 'sweep', write: true, group: 'More',
-  synopsis: 'sweep [--days N]', usage: 'sweep [--days N]',
-  summary: 'Archive items done more than N days ago (default 1)',
-  help: 'Archives done items older than N days. Types with sweep: false in the board config\n(decisions and terms by default) stay.',
-  flags: ['days'],
-  async run() {
-    const days = flags.days ? parseInt(flags.days, 10) : 1;
-    const answer = await api('POST', '/api/items/archive/sweep', { days }, { silent: true });
-    printWrite(answer, archived(answer, `nothing to sweep: no item was done more than ${days} day${days === 1 ? '' : 's'} ago`));
-  },
-};
-
-const sprintArg = (name, summary, path) => ({
-  name, group: 'More', synopsis: `${name} <SPRINT-id>`, usage: `${name} <SPRINT-id>`, summary,
-  async run() {
-    const sprintId = positional[0];
-    if (!sprintId) usageError(`Usage: pm ${name} <sprint-id>`);
-    await api('POST', `/api/sprints/${sprintId}/${path}`);
-  },
-});
-
-const contextCommand = (name, summary, types) => ({
-  name, group: 'More', synopsis: `${name} <type> <id>`, usage: `${name} <type> <id>`, summary,
-  help: `${summary}. <type> is ${types}. The board's knowledge-base queries run on this machine,\nand their results are added at the end.`,
+// `pm prompt` stays, out of the help: a brainstorming skill calls `pm prompt sdd <id>` (DD-028).
+const prompt = {
+  name: 'prompt', group: 'More', hidden: true,
+  synopsis: 'prompt <type> <id>', usage: 'prompt <type> <id>',
+  summary: 'A prompt scoped to one record',
+  help: 'A prompt scoped to one record. <type> is item, sdd or plan. The board\'s knowledge-base\nqueries run on this machine, and their results are added at the end.',
   async run() {
     const entityType = positional[0];
     const entityId = positional[1];
-    if (!entityType || !entityId) usageError(`Usage: pm ${name} <type> <id>`);
-    const answer = await api('POST', `/api/context/${name}`, { entityType, entityId }, { silent: true });
-    const append = name === 'prompt' ? appendPromptKnowledge : appendReviewKnowledge;
-    process.stdout.write(JSON.stringify(append(answer, runKnowledgeQuery), null, 2) + '\n');
+    if (!entityType || !entityId) usageError('Usage: pm prompt <type> <id>');
+    const answer = await api('POST', '/api/context/prompt', { entityType, entityId }, { silent: true });
+    process.stdout.write(JSON.stringify(appendPromptKnowledge(answer, runKnowledgeQuery), null, 2) + '\n');
   },
-});
+};
 
-// Undocumented 0.x list aliases.
-const listAlias = (name, type) => ({
-  name, group: 'More', hidden: true, synopsis: name, usage: `${name} [--sprint ID] [--all] [--limit N] [--json]`,
-  summary: `As pm list ${type}`, flags: LIST_FLAGS,
-  async run() { printList(await fetchListByType(name)); },
+// 0.x's `pm plans` stays, out of the help: the fix and execute-plan commands of three repos call it.
+const plans = {
+  name: 'plans', group: 'More', hidden: true, synopsis: 'plans', usage: 'plans [--sprint ID] [--all] [--limit N] [--json]',
+  summary: 'As pm list plan', flags: LIST_FLAGS,
+  async run() { printList(await fetchListByType('plans')); },
+};
+
+// Commands that went in pm 1.1 (DD-028): nobody ran them in the usage study, and no skill or
+// command doc calls them. Each answers with exit 2 and the command to use instead.
+const removed = (name, use) => ({
+  name, group: 'More', hidden: true, board: false, anyFlags: true, removed: use,
+  synopsis: name, usage: name, summary: `Removed in pm 1.1. Use: ${use}`,
+  run() { usageError(`pm ${name} was removed in pm 1.1 (DD-028).\nUse: ${use}`); },
 });
 
 // --- setup ---
@@ -736,14 +692,15 @@ const gone = (name) => ({
 export const COMMANDS = [
   get, list, ready, glossary,
   create, patch, comment, claim, release, archive,
-  plan, nextTask, taskUpdate, taskDone, planUpdate,
+  plan, nextTask, taskUpdate, taskDone,
   project,
-  issue, shorthand('decision'), shorthand('concern'), shorthand('gap'), sdd, sweep,
-  sprintArg('explore', 'A project\'s dossier: its records and their state, as text', 'explore'),
-  sprintArg('suggest', 'Items that could join a project', 'suggest'),
-  contextCommand('prompt', 'A prompt scoped to one record', 'item, sdd or plan'),
-  contextCommand('review', 'A review prompt for a design or plan', 'sdd or plan'),
-  listAlias('sdds', 'sdd'), listAlias('designs', 'sdd'), listAlias('plans', 'plan'), listAlias('sprints', 'sprint'),
+  issue, shorthand('decision'), shorthand('concern'), shorthand('gap'), sdd, prompt, plans,
+  removed('sweep', 'pm list --stage done, then pm archive <id> [<id> ...]'),
+  removed('explore', 'pm project SPRINT-NNN, the project\'s overview'),
+  removed('suggest', 'pm list, then pm patch <id> --sprint SPRINT-NNN to add an item to the project'),
+  removed('review', 'pm get <id> for the record, and pm list decision for the decisions to check it against'),
+  removed('plan-update', 'pm patch PLAN-NNN --title T --stage S --tasks @file.json'),
+  removed('sdds', 'pm list sdd'), removed('designs', 'pm list sdd'), removed('sprints', 'pm project list'),
   init, update, health, gone('serve'), gone('start'), gone('stop'),
 ];
 

@@ -31,5 +31,10 @@ git add .pm.json
 
 ## Use
 
-`pm --help` lists every command. The differences from 0.x are in DD-021: `init` makes a board on
-the server, `serve` and `stop` are gone, `update` installs 1.x.
+`pm help` lists the commands agents use, and `pm help <command>` gives one command's flags and
+examples. The differences from 0.x are in DD-021: `init` makes a board on the server, `serve` and
+`stop` are gone, `update` installs 1.x.
+
+pm 1.1 removed `sweep`, `explore`, `suggest`, `review`, `plan-update`, `sdds`, `designs` and
+`sprints`: each now names the command to use instead (DD-028). `issue`, `decision`, `concern`,
+`gap`, `sdd`, `design`, `prompt`, `plans` and `sprint` still work, but the help leaves them out.

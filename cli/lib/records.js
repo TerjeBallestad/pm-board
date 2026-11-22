@@ -166,7 +166,7 @@ export function resolveJsonFlag(key) {
     try {
       flags[key] = JSON.parse(raw);
     } catch (e) {
-      usageError(`Failed to parse ${key} as JSON: ${e.message}`);
+      usageError(`Invalid JSON for --${key}: ${e.message}`);
     }
   }
 }

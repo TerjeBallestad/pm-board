@@ -1,5 +1,0 @@
-$ pm plan-update PLAN-002 --tasks "[{\"title\":\"Only task\"}]"
-exit 0
---- stdout
-updated PLAN-002: tasks (1)
---- stderr

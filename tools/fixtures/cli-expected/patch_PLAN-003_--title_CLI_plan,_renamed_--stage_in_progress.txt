@@ -1,4 +1,4 @@
-$ pm plan-update PLAN-003 --title "CLI plan, renamed" --stage in_progress
+$ pm patch PLAN-003 --title "CLI plan, renamed" --stage in_progress
 exit 0
 --- stdout
 updated PLAN-003: title "CLI plan, renamed", stage in_progress

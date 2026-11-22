@@ -1,0 +1,5 @@
+$ pm serve
+exit 0
+--- stdout
+pm serve is gone in pm 1.x: the board lives on <server>, and its dashboard is at <server>/<slug>. Nothing to start or stop.
+--- stderr

@@ -1,0 +1,6 @@
+$ pm init
+exit 2
+--- stdout
+--- stderr
+Usage: pm init <slug> [--name "Board name"]
+The slug is the board's URL part: lowercase letters, digits and dashes.

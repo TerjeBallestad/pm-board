@@ -9,13 +9,15 @@ import { renderUsage, renderCommandHelp, closest, GUESSES, FLAG_GUESSES } from '
 // Flags every command takes: they pick the board, the server or the output.
 const GLOBAL_FLAGS = ['board', 'server', 'help', 'json'];
 
+// A hidden alias works, but neither the help nor "did you mean" names it (DD-028).
 const byName = new Map();
-for (const c of COMMANDS) for (const n of [c.name, ...(c.aliases || [])]) byName.set(n, c);
+for (const c of COMMANDS) for (const n of [c.name, ...(c.aliases || []), ...(c.hiddenAliases || [])]) byName.set(n, c);
+const shown = [...byName.keys()].filter(n => !byName.get(n).hidden && !byName.get(n).hiddenAliases?.includes(n));
 
 function suggestCommand(word) {
   const guess = GUESSES[String(word).toLowerCase()];
   if (guess) return guess;
-  return closest(word, [...byName.keys()].filter(n => !byName.get(n).hidden));
+  return closest(word, shown);
 }
 
 function unknownCommand(word) {
@@ -49,6 +51,7 @@ async function main() {
   if (subcmd === 'help') {
     const c = byName.get(positional[0]);
     if (!c) unknownCommand(positional[0]);
+    if (c.removed) return c.run();
     await loadConfigForHelp();
     process.stdout.write(renderCommandHelp(c));
     return;
@@ -56,6 +59,8 @@ async function main() {
 
   const command = byName.get(subcmd);
   if (!command) unknownCommand(subcmd);
+  // A removed command names what to use instead, with any arguments and with --help (DD-028).
+  if (command.removed) return command.run();
   if (flags.help === 'true') {
     await loadConfigForHelp();
     process.stdout.write(renderCommandHelp(command));

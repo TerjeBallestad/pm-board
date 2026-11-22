@@ -1,4 +1,4 @@
-$ pm plan-update PLAN-002 --tasks nope
+$ pm patch PLAN-002 --tasks nope
 exit 2
 --- stdout
 --- stderr

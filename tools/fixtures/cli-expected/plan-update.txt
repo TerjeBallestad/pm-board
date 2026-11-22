@@ -1,5 +1,0 @@
-$ pm plan-update
-exit 2
---- stdout
---- stderr
-Usage: pm plan-update <plan-id> [--tasks @file.json] [--title T] [--stage S]

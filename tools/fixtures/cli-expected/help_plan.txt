@@ -1,0 +1,22 @@
+$ pm help plan
+exit 0
+--- stdout
+Usage: pm plan <PLAN-id> [--json]
+       pm plan create < plan.json
+       pm plan list [--sprint ID]
+
+Shows a plan: its project and notes in short, one line per task with its status and open
+blockers, and the next task. pm get TASK-NNN reads one task in full; --json gives the whole
+plan. pm patch PLAN-NNN changes its title, stage or tasks.
+With create: a new plan from JSON on stdin:
+{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}
+
+Flags:
+  --json                    The whole plan, every task in full
+
+Examples:
+  pm plan PLAN-003
+  pm get TASK-021
+  pm plan create < plan.json
+  pm patch PLAN-003 --stage done
+--- stderr

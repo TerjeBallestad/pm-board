@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { distance, closest, GUESSES, FLAG_GUESSES } from '../lib/help.js';
 
-const names = ['get', 'show', 'list', 'ready', 'create', 'patch', 'comment', 'claim', 'release', 'archive', 'plan', 'next-task', 'task-done', 'task-update', 'plan-update', 'project', 'glossary', 'sweep', 'init', 'update', 'health'];
+const names = ['get', 'show', 'list', 'ready', 'create', 'patch', 'comment', 'claim', 'release', 'archive', 'plan', 'next-task', 'task-done', 'task-update', 'project', 'glossary', 'init', 'update', 'health'];
 
 test('a swap of two letters is one edit', () => {
   assert.equal(distance('lsit', 'list'), 1);

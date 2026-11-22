@@ -166,9 +166,7 @@ const steps = [
   ['list', 'sdd'],
   ['list', 'sprint'],
   ['list', 'bogus'],
-  ['sdds'],
   ['plans'],
-  ['sprints'],
   ['glossary'],
   ['glossary', '--json'],
   ['project'],
@@ -185,17 +183,20 @@ const steps = [
   ['concern', 'DC-001'],
   ['gap', 'list'],
   ['issue', 'list'],
-  ['explore', 'SPRINT-001'],
-  ['suggest', 'SPRINT-001'],
   ['prompt', 'item', 'SB-001'],
   ['prompt', 'sdd', 'SDD-001'],
   ['prompt', 'plan', 'PLAN-001'],
   ['prompt', 'item', 'SB-404'],
   ['prompt', 'item'],
-  ['review', 'sdd', 'SDD-001'],
-  ['review', 'plan', 'PLAN-001'],
-  ['review', 'item', 'SB-001'],
   ['patch', '--help'],
+  // The help, and the commands that had no step (DD-028).
+  ['help'],
+  ['help', 'plan'],
+  ['ready'],
+  ['show', 'SB-001', '--brief'],
+  ['init'],
+  ['update', 'SB-001'],
+  ['serve'],
   { argv: ['list'], cwd: 'sub/deeper' },
   // items
   ['create', 'issue', 'CLI issue', '--priority', 'high', '--body', 'Inline body', '--files', 'a.js,b.js', '--pillar', 'auth'],
@@ -246,8 +247,8 @@ const steps = [
   ['patch', 'SB-004', '--stage', 'done'],
   ['archive', 'SB-004', 'SB-404'],
   ['archive'],
-  ['sweep', '--days', '30'],
-  ['sweep'],
+  // 0.x's step here was sweep --days 30, which archived SB-003; sweep went in pm 1.1 (DD-028).
+  ['archive', 'SB-003'],
   ['list', '--all'],
   // designs
   ['sdd', 'create', 'CLI design', '--items', 'SB-006,SB-404', '--sprint', 'SPRINT-001', '--body', 'Design body'],
@@ -273,10 +274,10 @@ const steps = [
   { argv: ['task-done', 'PLAN-003', 'TASK-404', '-'], input: 'from stdin' },
   ['task-done', 'PLAN-003'],
   ['next-task', 'PLAN-003'],
-  ['plan-update', 'PLAN-003', '--title', 'CLI plan, renamed', '--stage', 'in_progress'],
-  ['plan-update', 'PLAN-002', '--tasks', '[{"title":"Only task"}]'],
-  ['plan-update', 'PLAN-002', '--tasks', 'nope'],
-  ['plan-update'],
+  // These were plan-update until pm 1.1 (DD-028): patch changes a plan the same way.
+  ['patch', 'PLAN-003', '--title', 'CLI plan, renamed', '--stage', 'in_progress'],
+  ['patch', 'PLAN-002', '--tasks', '[{"title":"Only task"}]'],
+  ['patch', 'PLAN-002', '--tasks', 'nope'],
   ['patch', 'PLAN-001', '--title', 'Renamed through patch'],
   ['get', 'PLAN-003'],
   ['get', 'PLAN-002'],
@@ -290,12 +291,7 @@ const steps = [
   ['project', 'SPRINT-002', '--json'],
   ['project'],
   ['project', 'SPRINT-404'],
-  ['explore', 'SPRINT-002'],
-  ['suggest', 'SPRINT-002'],
-  ['explore'],
   ['prompt', 'plan', 'PLAN-003'],
-  ['review', 'plan', 'PLAN-003'],
-  ['review', 'sdd', 'SDD-002'],
   ['frobnicate'],
   // the whole board at the end
   ['list', '--all', '--json'],
@@ -324,6 +320,7 @@ function mask(text) {
   // Node's own JSON.parse message changes with its version.
   t = t.replace(/^(Invalid JSON[^:\n]*: ).*$/gm, '$1<JSON.parse message>');
   // pm health prints the CLI's own version (DD-021); a release must not change the file.
+  t = t.replace(new RegExp(`^(.* — pm )${cliVersion.replace(/\./g, '\\.')}$`, 'm'), '$1<cli version>');
   return t.split(`"version": "${cliVersion}"`).join('"version": "<cli version>"');
 }
 /** stdout as stored: JSON with sorted keys, text as it is. */
@@ -463,11 +460,30 @@ const only = [
   }, (r) => r.code === 0 && r.stdout === 'commented on SB-001 as claude\n'],
   ['no .pm.json is an error that names pm init', () => v1In(tmpdir(), ['list']), (r) => r.code === 1 && /pm init <slug>/.test(r.stderr)],
   ['serve, start and stop print a note', () => v1In(repoA, ['serve']), (r) => r.code === 0 && /gone in pm 1.x/.test(r.stdout)],
+  // Removed in pm 1.1 (DD-028): exit 2, nothing on stdout, and the command to use instead. With
+  // arguments and with --help too, and with no board: the answer needs none.
+  ...[
+    [['sweep', '--days', '30'], /Use: pm list --stage done, then pm archive/],
+    [['explore', 'SPRINT-001'], /Use: pm project SPRINT-NNN/],
+    [['suggest', 'SPRINT-001'], /Use: pm list, then pm patch <id> --sprint/],
+    [['review', 'sdd', 'SDD-001'], /Use: pm get <id>/],
+    [['plan-update', 'PLAN-001', '--stage', 'done'], /Use: pm patch PLAN-NNN/],
+    [['sdds'], /Use: pm list sdd$/m],
+    [['designs', '--help'], /Use: pm list sdd$/m],
+    [['sprints'], /Use: pm project list$/m],
+    [['help', 'sweep'], /Use: pm list --stage done/],
+  ].map(([argv, use]) => [`pm ${argv.join(' ')} names its replacement and exits 2`, () => v1In(tmpdir(), argv),
+    (r) => r.code === 2 && r.stdout === '' && /^pm [a-z-]+ was removed in pm 1\.1 \(DD-028\)\.$/m.test(r.stderr) && use.test(r.stderr)]),
+  ['the hidden aliases still work', () => {
+    const rs = [['sprint', 'SPRINT-001'], ['design', 'SDD-001'], ['plans'], ['issue', 'SB-001'], ['decision', 'DD-001']].map((a) => v1In(repoB, [...a, '--board', slug]));
+    return { code: rs.reduce((n, r) => n + r.code, 0), stdout: rs.map((r) => r.stdout.slice(0, 40)).join('|'), stderr: rs.map((r) => r.stderr).join('') };
+  }, (r) => r.code === 0],
+  ['a hidden alias is not suggested', () => v1In(repoA, ['sprnt']), (r) => r.code === 2 && !/pm sprint/.test(r.stderr)],
   // The command table (PLAN-003 Task 3, DD-025): help per command, --version, did-you-mean, flag checks.
   ['--version prints the version', () => v1In(repoA, ['--version']), (r) => r.code === 0 && /^pm \d+\.\d+\.\d+/.test(r.stdout)],
-  ['pm help lists the commands by group', () => v1In(repoA, ['help']), (r) => r.code === 0 && /^Read:$/m.test(r.stdout) && /^  ready /m.test(r.stdout) && !/^  sdds /m.test(r.stdout)],
-  ['every command has its own help', () => {
-    const names = ['get', 'list', 'ready', 'glossary', 'create', 'patch', 'comment', 'claim', 'release', 'archive', 'plan', 'next-task', 'task-update', 'task-done', 'plan-update', 'project', 'issue', 'sdd', 'sweep', 'explore', 'suggest', 'prompt', 'review', 'init', 'update', 'health'];
+  ['pm help lists the commands by group', () => v1In(repoA, ['help']), (r) => r.code === 0 && /^Read:$/m.test(r.stdout) && /^  ready /m.test(r.stdout) && !/^  (sdds|issue|sdd|prompt) /m.test(r.stdout)],
+  ['every command has its own help, the hidden ones too', () => {
+    const names = ['get', 'list', 'ready', 'glossary', 'create', 'patch', 'comment', 'claim', 'release', 'archive', 'plan', 'next-task', 'task-update', 'task-done', 'project', 'init', 'update', 'health', 'issue', 'decision', 'concern', 'gap', 'sdd', 'prompt', 'plans'];
     const bad = names.filter((n) => { const r = v1In(repoA, ['help', n]); return r.code !== 0 || !r.stdout.startsWith(`Usage: pm ${n}`); });
     return { code: bad.length, stdout: bad.join(','), stderr: '' };
   }, (r) => r.code === 0],

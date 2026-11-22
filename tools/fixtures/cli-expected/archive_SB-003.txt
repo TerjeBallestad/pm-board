@@ -1,4 +1,4 @@
-$ pm sweep --days 30
+$ pm archive SB-003
 exit 0
 --- stdout
 archived 1: SB-003

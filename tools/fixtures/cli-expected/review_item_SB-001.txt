@@ -1,5 +1,0 @@
-$ pm review item SB-001
-exit 1
---- stdout
---- stderr
-Error 400: {"error":"entityType must be sdd or plan"}

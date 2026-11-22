@@ -1,0 +1,45 @@
+$ pm help
+exit 0
+--- stdout
+Write fixture — pm <cli version>
+
+Usage: pm <command> [args] [--flags]
+       pm help <command>, or pm <command> --help, for its flags and examples
+
+Read:
+  get <id> [--brief]                One record as JSON; the terms it mentions follow
+  list [<type>] [filters]           Records as "ID  title", oldest first, the newest 20
+  ready [<type>] [--sprint ID]      Work that can start now: not done, not blocked, not claimed
+  glossary [--json]                 Every term on the board: one word, one meaning
+
+Write:
+  create <type> "title" [...]       A new item (issue, decision, concern, gap, term, ...)
+  patch <id> --field value ...      Change fields of an item, design, plan or project
+  comment <id> "text" [--author A]  Add a comment to an item, design, plan or project
+  claim <id> --as "label"           Claim a ticket for this session; fails if another holds it
+  release <id>                      Release a claim without closing the ticket
+  archive <id> [<id> ...]           Move items to the archive
+
+Plans and tasks:
+  plan <id> [--json]                A plan's overview: one line per task, and the next task
+  next-task <plan-id> [--json]      The next task in full, and every task in short
+  task-update <plan> <task> [...]   Change a task's status, or add a progress note
+  task-done <plan> <task> "note"    Mark a task done and passing, with a progress note
+
+Projects:
+  project [<id>] [--json]           A project's overview (default: the active one), or create one
+
+Setup:
+  init <slug> [--name N]            Create or link this repo's board, and write .pm.json
+  update                            Install the newest pm 1.x
+  health                            Whether the server answers; the CLI version and the board name
+
+Board and server:
+  --board <slug>                    Use this board, not the one in .pm.json
+  --server <url>                    Use this server, as PM_URL does
+
+Environment:
+  PM_URL                            Server URL (default: https://pm.godstemning.dev)
+  PM_TOKEN                          Token for writes
+  ~/.config/pm/config.json holds this machine's {"url", "token"}; the variables win.
+--- stderr
