@@ -1,0 +1,6 @@
+$ pm glossary
+exit 0
+--- stdout
+TERM-002  Board    One repo's whole board.
+TERM-001  Session  The time a user stays logged in.
+--- stderr

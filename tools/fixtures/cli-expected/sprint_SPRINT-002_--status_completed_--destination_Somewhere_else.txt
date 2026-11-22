@@ -1,0 +1,14 @@
+$ pm sprint SPRINT-002 --status completed --destination "Somewhere else"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "The project doc",
+  "comments": [],
+  "completedAt": "<new time>",
+  "createdAt": "<new time>",
+  "id": "SPRINT-002",
+  "name": "CLI project",
+  "problemStatement": "Somewhere else",
+  "status": "completed"
+}
+--- stderr

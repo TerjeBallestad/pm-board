@@ -1,0 +1,24 @@
+$ pm create gap "From stdin" --body -
+(stdin "A body from stdin.\n")
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "A body from stdin.",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "GAP-002",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "inbox",
+  "title": "From stdin",
+  "type": "gap",
+  "updatedAt": "<new time>"
+}
+--- stderr

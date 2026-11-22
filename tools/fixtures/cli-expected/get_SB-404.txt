@@ -1,0 +1,5 @@
+$ pm get SB-404
+exit 1
+--- stdout
+--- stderr
+Error 404: {"error":"Not found"}

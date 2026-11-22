@@ -1,0 +1,5 @@
+$ pm release
+exit 1
+--- stdout
+--- stderr
+Usage: pm release <id>

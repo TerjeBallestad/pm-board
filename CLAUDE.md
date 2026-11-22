@@ -54,7 +54,8 @@ each adds a board to the database you give it and starts its own server.
 dotnet build server/PmBoard.slnx && (cd tools && npm install)
 PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-write.mjs
 (cd cli && npm test)   # cli/lib's copies of shared/ are current: after a change, npm run sync-shared
-PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-cli.mjs
+PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-cli.mjs --expected   # DD-024
+PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-cli.mjs              # against 0.x
 PMB_PG=postgres://pm_board:pm_board@localhost:55433/pm_board node tools/compare-export.mjs   # the exporter
 ```
 
@@ -62,6 +63,10 @@ When you touch the read side (routes, V0Json, the importer), also run the golden
 real boards: export each board, import into a scratch Postgres, start the server, then
 `node tools/compare-read.mjs ~/dev/<repo> <slug> http://localhost:5055 <dump>.report.json`.
 Every board must print `no differences`. See README.md for the commands.
+
+The CLI's output changes only with a DD that says why (DD-024). Run `compare-cli.mjs --update`,
+review `git diff tools/fixtures/cli-expected`, and commit the files with the change. That first
+change also takes the 0.x comparison out of CI.
 
 Red-green: when you add a test, break the code it guards once and watch it fail.
 

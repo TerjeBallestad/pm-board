@@ -1,0 +1,8 @@
+$ pm sweep
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "archived": 0,
+  "ids": []
+}
+--- stderr

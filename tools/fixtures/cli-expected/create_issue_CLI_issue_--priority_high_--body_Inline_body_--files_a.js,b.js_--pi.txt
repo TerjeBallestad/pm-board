@@ -1,0 +1,26 @@
+$ pm create issue "CLI issue" --priority high --body "Inline body" --files a.js,b.js --pillar auth
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [
+    "a.js",
+    "b.js"
+  ],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "Inline body",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "SB-006",
+  "pillar": "auth",
+  "priority": "high",
+  "related": [],
+  "sprintId": null,
+  "stage": "inbox",
+  "title": "CLI issue",
+  "type": "issue",
+  "updatedAt": "<new time>"
+}
+--- stderr

@@ -1,0 +1,9 @@
+$ pm prompt plan PLAN-003
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "entityId": "PLAN-003",
+  "entityType": "plan",
+  "prompt": "# PLAN-003: CLI plan, renamed\n\n## Setup\n\nNotes\n\n## Design Decisions\n\nDD-001\n\n## Relevant Files\n\n- `a.js`\n\n## Design Document: SDD-002 — CLI design\n\nDesign body\n\n## Tasks\n\n- [x] **TASK-005**: First\n- [x] **TASK-006**: Second (blocked by: TASK-005)\n  A body from a file.\n\nSecond paragraph.\n\n  Verify: run it\n"
+}
+--- stderr

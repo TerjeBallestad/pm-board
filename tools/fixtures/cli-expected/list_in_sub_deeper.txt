@@ -1,0 +1,14 @@
+$ pm list
+(in sub/deeper)
+exit 0
+--- stdout
+DC-001    Cookie consent rules
+DD-001    Use cookies for the login session
+DD-002    An old settled decision
+GAP-001   No login metrics
+SB-001    Fix the login flow
+SB-002    Session timeout too short
+SB-003    Old done work
+SB-004    Claimed long ago
+TERM-001  Session
+--- stderr

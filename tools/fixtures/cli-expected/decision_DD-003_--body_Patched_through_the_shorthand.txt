@@ -1,0 +1,23 @@
+$ pm decision DD-003 --body "Patched through the shorthand"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "Patched through the shorthand",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "DD-003",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "title": "CLI decision",
+  "type": "decision",
+  "updatedAt": "<new time>"
+}
+--- stderr

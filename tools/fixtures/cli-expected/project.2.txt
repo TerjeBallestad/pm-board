@@ -1,0 +1,8 @@
+$ pm project
+exit 0
+--- stdout
+SPRINT-003  Second CLI project  (active)
+Destination: Elsewhere
+
+Drill down: pm get <id> · full JSON: pm project SPRINT-003 --json
+--- stderr

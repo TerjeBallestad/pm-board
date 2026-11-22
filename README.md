@@ -89,6 +89,23 @@ It runs about 160 `pm` commands with 0.x's `bin/pm` (serverless, on a temp copy 
 and with `cli/bin/pm` (against a server that imported it), and compares exit code, stdout and
 stderr. JSON compares as data. Then it checks the 1.x-only commands: `init`, tokens, `serve`.
 
+From pm 1.1 the contract for the CLI's output is a set of expected files, not 0.x (DD-024):
+
+```sh
+PMB_PG=postgres://pm_board:pm_board@localhost:5432/pm_board node tools/compare-cli.mjs --expected
+PMB_PG=postgres://pm_board:pm_board@localhost:5432/pm_board node tools/compare-cli.mjs --update
+```
+
+`--expected` runs the same commands with `cli/bin/pm` only, and compares each command's exit code,
+stdout and stderr with its file in `tools/fixtures/cli-expected/`. Each file is named after its
+command (`list_--frontier.2.txt` is the second `pm list --frontier`), so a failure prints a diff
+that names the command. The files mask what changes from run to run: a time or comment id made
+during the run, the slug, the server URL, the temp folder, the CLI's version and Node's JSON.parse
+message. JSON stdout is stored with sorted keys. It needs no 0.x. CI runs both modes.
+
+A change of output needs a DD that says why. Make the change, run `--update`, read
+`git diff tools/fixtures/cli-expected`, and commit the files with the code.
+
 ## Export to pm-data
 
 ```sh

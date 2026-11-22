@@ -1,0 +1,18 @@
+$ pm list --all
+exit 0
+--- stdout
+DC-001    Cookie consent rules
+DD-001    Use cookies for the login session
+DD-002    An old settled decision
+GAP-001   No login metrics
+TERM-001  Session
+GAP-002   From stdin
+SB-007    Blocked one
+SB-008    Shorthand issue
+DC-002    A concern
+DD-003    CLI decision
+SB-006    CLI issue, renamed
+SB-002    Session timeout too short
+TERM-002  Board
+SB-001    Fix the login flow
+--- stderr

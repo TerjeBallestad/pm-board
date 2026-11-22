@@ -1,0 +1,5 @@
+$ pm claim SB-003 --as agent-a
+exit 1
+--- stdout
+--- stderr
+Error 409: {"error":"SB-003 is already done"}

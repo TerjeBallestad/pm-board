@@ -1,0 +1,5 @@
+$ pm issue
+exit 1
+--- stdout
+--- stderr
+Usage: pm issue <id or "title">

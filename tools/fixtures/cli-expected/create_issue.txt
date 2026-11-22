@@ -1,0 +1,5 @@
+$ pm create issue
+exit 1
+--- stdout
+--- stderr
+Usage: pm create <type> "title"

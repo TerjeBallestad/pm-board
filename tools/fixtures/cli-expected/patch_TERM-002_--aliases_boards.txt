@@ -1,0 +1,25 @@
+$ pm patch TERM-002 --aliases boards
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [
+    "boards"
+  ],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "One repo's whole board.",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "TERM-002",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "inbox",
+  "title": "Board",
+  "type": "term",
+  "updatedAt": "<new time>"
+}
+--- stderr

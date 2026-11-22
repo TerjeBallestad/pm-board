@@ -1,0 +1,8 @@
+$ pm list issue
+exit 0
+--- stdout
+SB-001  Fix the login flow
+SB-002  Session timeout too short
+SB-003  Old done work
+SB-004  Claimed long ago
+--- stderr

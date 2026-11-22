@@ -1,0 +1,9 @@
+$ pm project SPRINT-002
+exit 0
+--- stdout
+SPRINT-002  CLI project  (completed)
+Destination: Somewhere else
+Project doc: 15 chars (see --json)
+
+Drill down: pm get <id> · full JSON: pm project SPRINT-002 --json
+--- stderr

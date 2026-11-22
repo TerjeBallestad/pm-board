@@ -1,0 +1,39 @@
+$ pm patch --help
+exit 0
+--- stdout
+Usage: pm patch <id> [--key value ...]
+
+Update any field on an item, design, or plan.
+
+Items (SB, DD, DC, GAP, ...):
+  --title T            Rename
+  --body TEXT           Set body (--body @file.md to read from file, --body - for stdin)
+  --stage S             Move to stage (inbox, exploring, sdd, planned, done)
+  --priority P          Set priority (low, medium, high, critical)
+  --pillar P            Set design pillar
+  --sprint SPRINT-NNN   Assign to sprint
+  --files f1,f2         Set affected files (comma-separated)
+  --related IDs         Set related IDs (comma-separated, e.g. SDD-060,DD-042)
+  --blockedBy IDs       Set blocking edges (comma-separated; '' clears). Items whose
+                        blockers are all done/archived show in "pm list --frontier"
+  --assignee LABEL      Force-set/override a claim ('' clears). Normal claiming
+                        goes through "pm claim <id> --as LABEL" (conflict-checked)
+
+Designs (SDD):
+  --title T             Rename
+  --body TEXT           Set body (--body @file.md, --body -)
+  --stage S             Move to stage
+  --items IDs           Set linked item IDs (comma-separated)
+  --sprint SPRINT-NNN   Assign to sprint
+
+Plans (PLAN):
+  --title T             Rename
+  --stage S             Move to stage
+  --context TEXT        Set plan context
+  --sprint SPRINT-NNN   Assign to sprint
+  --tasks @file.json    Replace all tasks from JSON file
+
+Sprints (SPRINT):
+  --name N              Rename
+  --status S            Set status (active, completed)
+--- stderr

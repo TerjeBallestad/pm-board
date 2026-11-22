@@ -1,0 +1,25 @@
+$ pm sdd SDD-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "How login works.",
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "id": "SDD-001",
+  "itemIds": [
+    "SB-001"
+  ],
+  "sprintId": "SPRINT-001",
+  "stage": "sdd",
+  "tests": [
+    {
+      "claims": [],
+      "file": "tests/design.test.js",
+      "name": "design_test",
+      "summary": "Design holds"
+    }
+  ],
+  "title": "Login design",
+  "updatedAt": "2026-02-01T10:00:00.000Z"
+}
+--- stderr

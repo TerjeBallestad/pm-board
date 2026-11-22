@@ -1,0 +1,32 @@
+$ pm get PLAN-002
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "comments": [],
+  "context": {
+    "designDecisions": "",
+    "relevantFiles": [],
+    "setupNotes": ""
+  },
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "id": "PLAN-002",
+  "sddId": null,
+  "sprintId": null,
+  "stage": "planned",
+  "tasks": [
+    {
+      "blockedBy": [],
+      "description": "",
+      "id": "TASK-007",
+      "passes": false,
+      "progressNotes": [],
+      "status": "pending",
+      "steps": [],
+      "title": "Only task",
+      "verification": ""
+    }
+  ],
+  "title": "Old plan with a label as a blocker",
+  "updatedAt": "<new time>"
+}
+--- stderr

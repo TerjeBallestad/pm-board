@@ -1,0 +1,52 @@
+$ pm list decision --json
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Cookies, not tokens in local storage.\nSecond line.",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "DD-001",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": "SPRINT-001",
+    "stage": "inbox",
+    "tests": [
+      {
+        "claims": [],
+        "file": "tests/login.test.js",
+        "name": "login_cookie_test",
+        "summary": "Login sets a cookie"
+      }
+    ],
+    "title": "Use cookies for the login session",
+    "type": "decision",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "doneAt": "2026-03-01T10:00:00.000Z",
+    "id": "DD-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "done",
+    "title": "An old settled decision",
+    "type": "decision",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  }
+]
+--- stderr

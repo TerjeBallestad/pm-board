@@ -1,16 +1,25 @@
 #!/usr/bin/env node
-// Golden check of the 1.x CLI (cli/bin/pm). One script of pm commands runs with 0.x's bin/pm,
-// serverless on a temp copy of a fixture board, and with 1.x's, against a server that imported the
-// same board. Each command's exit code, stdout and stderr must be the same. JSON compares as data
-// with compare-write's rules (golden-diff.mjs): jsonb keeps no key order, and a time made during
-// the run only has to be new on both sides. Text compares as text, with new times masked.
+// Golden check of the 1.x CLI (cli/bin/pm). One script of about 160 pm commands, in two modes.
 //
-//   PMB_PG=postgres://user:pass@host:port/db node tools/compare-cli.mjs [<fixture folder>] [--base <url>]
+// --expected (CI): each command runs with cli/bin/pm against a server that imported the fixture,
+// and its exit code, stdout and stderr must equal its file in tools/fixtures/cli-expected/. From
+// pm 1.1 a change of output needs a DD that says why (DD-024); --update rewrites the files, and
+// the diff of the files is the change to review. What changes from run to run is masked: a time
+// or comment id made during the run, the slug, the server URL and the temp folders. JSON is stored
+// with sorted keys, as jsonb keeps no key order.
+//
+// Default: the same script runs with 0.x's bin/pm too, serverless on a temp copy of the fixture,
+// and each command's exit code, stdout and stderr must be the same on both. JSON compares as data
+// with compare-write's rules (golden-diff.mjs): jsonb keeps no key order, and a time made during
+// the run only has to be new on both sides. Text compares as text, with new times masked. This
+// mode needs 0.x (the tools/ package depends on it).
+//
+//   PMB_PG=postgres://user:pass@host:port/db node tools/compare-cli.mjs [--expected | --update] [<fixture folder>] [--base <url>]
 //
 // Like compare-write, it imports the fixture into PMB_PG under a new slug, mints a token and starts
 // the server, unless --base points at one on the same database. Build the server first.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,7 +30,10 @@ import { makeDiff } from './golden-diff.mjs';
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const args = process.argv.slice(2);
 const baseArg = args.includes('--base') ? args[args.indexOf('--base') + 1] : null;
+const update = args.includes('--update');
+const expectedMode = update || args.includes('--expected');
 const fixture = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--base') ?? here('./fixtures/write-board');
+const expectedDir = here('./fixtures/cli-expected');
 const pgUrl = process.env.PMB_PG;
 if (!pgUrl) {
   console.error('set PMB_PG to a Postgres connection string (the board is imported there under a new slug)');
@@ -38,16 +50,21 @@ const v1Dir = mkdtempSync(join(tmpdir(), 'pm-cli-v1-'));
 writeFileSync(join(v1Dir, '.pm.json'), JSON.stringify({ board: slug }) + '\n');
 const v1Bin = here('../cli/bin/pm');
 
-// --- 0.x: a temp copy of the fixture folder, serverless ---
-const require = createRequire(import.meta.url);
-const v0Pkg = dirname(require.resolve('@terjeballestad/pm-board-cli/package.json'));
-const v0Version = JSON.parse(readFileSync(join(v0Pkg, 'package.json'), 'utf8')).version;
-const v0Bin = join(v0Pkg, 'bin', 'pm');
-const v0Dir = mkdtempSync(join(tmpdir(), 'pm-cli-v0-'));
-cpSync(fixture, v0Dir, { recursive: true });
+// --- 0.x: a temp copy of the fixture folder, serverless; not in the expected mode ---
+let v0Version = null;
+let v0Bin = null;
+let v0Dir = null;
+if (!expectedMode) {
+  const require = createRequire(import.meta.url);
+  const v0Pkg = dirname(require.resolve('@terjeballestad/pm-board-cli/package.json'));
+  v0Version = JSON.parse(readFileSync(join(v0Pkg, 'package.json'), 'utf8')).version;
+  v0Bin = join(v0Pkg, 'bin', 'pm');
+  v0Dir = mkdtempSync(join(tmpdir(), 'pm-cli-v0-'));
+  cpSync(fixture, v0Dir, { recursive: true });
+}
 
 // Files the commands read (--body @file, @note), and a subfolder: both CLIs walk up to their config.
-for (const dir of [v0Dir, v1Dir]) {
+for (const dir of [v0Dir, v1Dir].filter(Boolean)) {
   writeFileSync(join(dir, 'body.md'), 'A body from a file.\n\nSecond paragraph.\n');
   writeFileSync(join(dir, 'note.md'), 'Done: see commit abc123.\n');
   mkdirSync(join(dir, 'sub', 'deeper'), { recursive: true });
@@ -55,7 +72,7 @@ for (const dir of [v0Dir, v1Dir]) {
 
 const baseEnv = { ...process.env };
 for (const k of ['PM_URL', 'PM_TOKEN', 'CLAUDE_SESSION_ID']) delete baseEnv[k];
-const v0Env = { ...baseEnv, PM_STATE_DIR: join(v0Dir, '.state') };
+const v0Env = v0Dir && { ...baseEnv, PM_STATE_DIR: join(v0Dir, '.state') };
 // XDG_CONFIG_HOME keeps this machine's ~/.config/pm/config.json out of the run.
 const v1Env = { ...baseEnv, PM_URL: v1Board.base, PM_TOKEN: v1Board.token, XDG_CONFIG_HOME: join(v1Dir, '.config') };
 
@@ -294,28 +311,121 @@ const steps = [
 let failures = 0;
 let compared = 0;
 const show = (v) => JSON.stringify(v)?.slice(0, 200);
-console.log(`${slug}: 0.x ${v0Version} bin/pm against 1.x cli/bin/pm on ${v1Board.base}`);
 
-for (const s of steps) {
-  const step = Array.isArray(s) ? { argv: s } : s;
-  const a = run(0, step.argv, step);
-  const b = run(1, step.argv, step);
-  const label = `pm ${step.argv.join(' ')}${step.cwd ? ` (in ${step.cwd})` : ''}`;
-  if (step.differs) {
-    const ok = step.check(a, b);
-    console.log(`${ok ? 'ok  ' : 'DIFF'}  ${label}: ${step.differs}`);
-    if (!ok) {
-      console.log(`      0.x ${a.code} ${show(a.stdout + a.stderr)}\n      1.x ${b.code} ${show(b.stdout + b.stderr)}`);
+// --- the expected mode: one file per step in tools/fixtures/cli-expected/ ---
+const cliVersion = JSON.parse(readFileSync(here('../cli/package.json'), 'utf8')).version;
+const sortKeys = (v) =>
+  Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : v;
+/** What changes from run to run, masked: the temp folder, the server, the slug, new times and comment ids. */
+function mask(text) {
+  let t = text;
+  for (const [from, to] of [[realpathSync(v1Dir), '<repo>'], [v1Dir, '<repo>'], [v1Board.base, '<server>'], [slug, '<slug>']]) t = t.split(from).join(to);
+  t = textTimes(t).replace(/\bc(\d{12,})\b/g, (m, ms) => (Number(ms) >= start - 1000 ? '<new comment id>' : m));
+  // Node's own JSON.parse message changes with its version.
+  t = t.replace(/^(Invalid JSON[^:\n]*: ).*$/gm, '$1<JSON.parse message>');
+  // pm health prints the CLI's own version (DD-021); a release must not change the file.
+  return t.split(`"version": "${cliVersion}"`).join('"version": "<cli version>"');
+}
+/** stdout as stored: JSON with sorted keys, text as it is. */
+function storedOut(out) {
+  const p = parse(out);
+  return out.trim() && p.ok ? { kind: ' (JSON, keys sorted)', text: JSON.stringify(sortKeys(p.value), null, 2) + '\n' } : { kind: '', text: out };
+}
+/** stderr as stored: an `Error NNN: {json}` line keeps its JSON on one line, with sorted keys. */
+const storedErr = (err) =>
+  err
+    .split('\n')
+    .map((l) => {
+      const m = l.match(/^(Error \d+: )(.*)$/);
+      const p = m && parse(m[2]);
+      return p?.ok ? m[1] + JSON.stringify(sortKeys(p.value)) : l;
+    })
+    .join('\n');
+function render(step, r) {
+  const out = storedOut(r.stdout);
+  return mask(
+    [
+      `$ pm ${step.argv.map((x) => (/^[\w@.,:/=-]+$/.test(x) ? x : JSON.stringify(x))).join(' ')}`,
+      ...(step.cwd ? [`(in ${step.cwd})`] : []),
+      ...(step.input !== undefined ? [`(stdin ${JSON.stringify(step.input)})`] : []),
+      `exit ${r.code}`,
+      `--- stdout${out.kind}`,
+      out.text + `--- stderr`,
+      storedErr(r.stderr),
+    ].join('\n'),
+  );
+}
+/** One file per step, named after the command; a command that runs again gets .2, .3, ... */
+const seen = new Map();
+function fileName(step) {
+  const base = [...step.argv, ...(step.cwd ? ['in', step.cwd] : [])].join('_').replace(/[^\w.,@-]+/g, '_').slice(0, 80) || 'no-args';
+  const n = (seen.get(base) ?? 0) + 1;
+  seen.set(base, n);
+  return `${base}${n > 1 ? `.${n}` : ''}.txt`;
+}
+
+if (expectedMode) {
+  console.log(`${slug}: 1.x cli/bin/pm on ${v1Board.base} against ${update ? 'new ' : ''}expected files in tools/fixtures/cli-expected`);
+  mkdirSync(expectedDir, { recursive: true });
+  const written = new Set();
+  const actualDir = mkdtempSync(join(tmpdir(), 'pm-cli-actual-'));
+  for (const s of steps) {
+    const step = Array.isArray(s) ? { argv: s } : s;
+    const name = fileName(step);
+    const text = render(step, run(1, step.argv, step));
+    const file = join(expectedDir, name);
+    written.add(name);
+    compared++;
+    if (update) {
+      writeFileSync(file, text);
+      continue;
+    }
+    const want = existsSync(file) ? readFileSync(file, 'utf8') : null;
+    const same = want === text;
+    console.log(`${same ? 'ok  ' : 'DIFF'}  pm ${step.argv.join(' ')}${step.cwd ? ` (in ${step.cwd})` : ''}`);
+    if (same) continue;
+    failures++;
+    if (want === null) {
+      console.log(`      no file tools/fixtures/cli-expected/${name}: run with --update, then review the new file`);
+      continue;
+    }
+    writeFileSync(join(actualDir, name), text);
+    const d = spawnSync('diff', ['-u', '-L', `expected/${name}`, '-L', `actual/${name}`, file, join(actualDir, name)], { encoding: 'utf8' });
+    console.log(d.stdout.replace(/^/gm, '      '));
+  }
+  rmSync(actualDir, { recursive: true, force: true });
+  for (const f of readdirSync(expectedDir)) {
+    if (written.has(f)) continue;
+    if (update) rmSync(join(expectedDir, f));
+    else {
+      console.log(`DIFF  tools/fixtures/cli-expected/${f}: no step makes it; run with --update`);
       failures++;
     }
-    continue;
   }
-  compared++;
-  const d = compare(a, b);
-  console.log(`${d ? 'DIFF' : 'same'}  ${label} -> ${a.code}`);
-  if (d) {
-    console.log(`      ${d.path}: 0.x ${show(d.a)}\n      ${' '.repeat(d.path.length)}  1.x ${show(d.b)}`);
-    failures++;
+  if (update) console.log(`wrote ${written.size} files; review them with git diff tools/fixtures/cli-expected`);
+} else {
+  console.log(`${slug}: 0.x ${v0Version} bin/pm against 1.x cli/bin/pm on ${v1Board.base}`);
+  for (const s of steps) {
+    const step = Array.isArray(s) ? { argv: s } : s;
+    const a = run(0, step.argv, step);
+    const b = run(1, step.argv, step);
+    const label = `pm ${step.argv.join(' ')}${step.cwd ? ` (in ${step.cwd})` : ''}`;
+    if (step.differs) {
+      const ok = step.check(a, b);
+      console.log(`${ok ? 'ok  ' : 'DIFF'}  ${label}: ${step.differs}`);
+      if (!ok) {
+        console.log(`      0.x ${a.code} ${show(a.stdout + a.stderr)}\n      1.x ${b.code} ${show(b.stdout + b.stderr)}`);
+        failures++;
+      }
+      continue;
+    }
+    compared++;
+    const d = compare(a, b);
+    console.log(`${d ? 'DIFF' : 'same'}  ${label} -> ${a.code}`);
+    if (d) {
+      console.log(`      ${d.path}: 0.x ${show(d.a)}\n      ${' '.repeat(d.path.length)}  1.x ${show(d.b)}`);
+      failures++;
+    }
   }
 }
 
@@ -366,7 +476,7 @@ for (const [name, act, ok] of only) {
 }
 
 v1Board.close();
-rmSync(v0Dir, { recursive: true, force: true });
+if (v0Dir) rmSync(v0Dir, { recursive: true, force: true });
 rmSync(v1Dir, { recursive: true, force: true });
 console.log(failures ? `${failures} differences` : `no differences (${compared} commands, ${only.length} 1.x-only checks)`);
 process.exit(failures ? 1 : 0);

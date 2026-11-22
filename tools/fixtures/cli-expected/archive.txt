@@ -1,0 +1,5 @@
+$ pm archive
+exit 1
+--- stdout
+--- stderr
+Usage: pm archive <id> [<id2>...]

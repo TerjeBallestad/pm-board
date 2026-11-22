@@ -1,0 +1,5 @@
+$ pm list sprint
+exit 0
+--- stdout
+SPRINT-001  Login project
+--- stderr

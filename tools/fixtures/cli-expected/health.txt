@@ -1,0 +1,9 @@
+$ pm health
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "project": "Write fixture",
+  "status": "ok",
+  "version": "<cli version>"
+}
+--- stderr

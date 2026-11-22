@@ -1,0 +1,6 @@
+$ pm frobnicate
+exit 1
+--- stdout
+--- stderr
+Unknown command: frobnicate
+Run: pm --help

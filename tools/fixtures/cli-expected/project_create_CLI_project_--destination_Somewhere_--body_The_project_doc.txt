@@ -1,0 +1,14 @@
+$ pm project create "CLI project" --destination Somewhere --body "The project doc"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "The project doc",
+  "comments": [],
+  "completedAt": null,
+  "createdAt": "<new time>",
+  "id": "SPRINT-002",
+  "name": "CLI project",
+  "problemStatement": "Somewhere",
+  "status": "active"
+}
+--- stderr

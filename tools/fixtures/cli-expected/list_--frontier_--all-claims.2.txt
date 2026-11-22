@@ -1,0 +1,14 @@
+$ pm list --frontier --all-claims
+exit 0
+--- stdout
+DC-001   Cookie consent rules
+DD-001   Use cookies for the login session
+GAP-001  No login metrics
+SB-004   Claimed long ago
+GAP-002  From stdin
+SB-008   Shorthand issue
+DC-002   A concern
+DD-003   CLI decision
+SB-006   CLI issue, renamed
+SB-001   Fix the login flow
+--- stderr

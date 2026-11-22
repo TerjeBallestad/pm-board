@@ -1,0 +1,5 @@
+$ pm patch
+exit 1
+--- stdout
+--- stderr
+Usage: pm patch <id> [--key value ...]

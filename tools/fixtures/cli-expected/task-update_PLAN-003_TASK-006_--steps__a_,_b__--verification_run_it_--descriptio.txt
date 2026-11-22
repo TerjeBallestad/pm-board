@@ -1,0 +1,20 @@
+$ pm task-update PLAN-003 TASK-006 --steps "[\"a\",\"b\"]" --verification "run it" --description @body.md --passes false
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "blockedBy": [
+    "TASK-005"
+  ],
+  "description": "A body from a file.\n\nSecond paragraph.\n",
+  "id": "TASK-006",
+  "passes": false,
+  "progressNotes": [],
+  "status": "pending",
+  "steps": [
+    "a",
+    "b"
+  ],
+  "title": "Second",
+  "verification": "run it"
+}
+--- stderr

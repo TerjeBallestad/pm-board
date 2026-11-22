@@ -1,0 +1,9 @@
+$ pm prompt sdd SDD-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "entityId": "SDD-001",
+  "entityType": "sdd",
+  "prompt": "# SDD-001: Login design\n\nHow login works.\n\n## Source Items\n\n### SB-001: Fix the login flow\n**Type:** issue | **Priority:** unset\nUsers cannot log in after a session ends.\n\n\n## Discussion\n\n(no comments)\n"
+}
+--- stderr

@@ -1,0 +1,5 @@
+$ pm next-task
+exit 1
+--- stdout
+--- stderr
+Usage: pm next-task <plan-id>

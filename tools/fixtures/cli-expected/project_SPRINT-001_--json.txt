@@ -1,0 +1,267 @@
+$ pm project SPRINT-001 --json
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "",
+  "comments": [
+    {
+      "author": "claude",
+      "createdAt": "<new time>",
+      "id": "<new comment id>",
+      "text": "A project note"
+    }
+  ],
+  "completedAt": null,
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "designs": [
+    {
+      "body": "How login works.",
+      "comments": [
+        {
+          "author": "claude",
+          "createdAt": "<new time>",
+          "id": "<new comment id>",
+          "text": "A design note"
+        }
+      ],
+      "createdAt": "2026-01-01T10:00:00.000Z",
+      "id": "SDD-001",
+      "itemIds": [
+        "SB-001"
+      ],
+      "sprintId": "SPRINT-001",
+      "stage": "sdd",
+      "title": "Login design",
+      "updatedAt": "<new time>"
+    },
+    {
+      "body": "Design body",
+      "comments": [],
+      "createdAt": "<new time>",
+      "id": "SDD-002",
+      "itemIds": [
+        "SB-006",
+        "SB-404"
+      ],
+      "sprintId": "SPRINT-001",
+      "stage": "planned",
+      "title": "CLI design",
+      "updatedAt": "<new time>"
+    }
+  ],
+  "id": "SPRINT-001",
+  "items": [
+    {
+      "affectedFiles": [],
+      "aliases": [],
+      "assignedAt": null,
+      "assignee": null,
+      "blockedBy": [],
+      "comments": [],
+      "createdAt": "2026-01-01T10:00:00.000Z",
+      "id": "DC-001",
+      "pillar": "",
+      "priority": null,
+      "related": [],
+      "sprintId": "SPRINT-001",
+      "stage": "inbox",
+      "title": "Cookie consent rules",
+      "type": "concern",
+      "updatedAt": "2026-02-01T10:00:00.000Z"
+    },
+    {
+      "affectedFiles": [],
+      "aliases": [],
+      "assignedAt": null,
+      "assignee": null,
+      "blockedBy": [],
+      "body": "Cookies, not tokens in local storage.\nSecond line.",
+      "comments": [],
+      "createdAt": "2026-01-01T10:00:00.000Z",
+      "id": "DD-001",
+      "pillar": "",
+      "priority": null,
+      "related": [],
+      "sprintId": "SPRINT-001",
+      "stage": "inbox",
+      "title": "Use cookies for the login session",
+      "type": "decision",
+      "updatedAt": "2026-02-01T10:00:00.000Z"
+    },
+    {
+      "affectedFiles": [],
+      "aliases": [],
+      "assignedAt": null,
+      "assignee": null,
+      "blockedBy": [],
+      "body": "Patched through the shorthand",
+      "comments": [],
+      "createdAt": "<new time>",
+      "id": "DD-003",
+      "pillar": "",
+      "priority": null,
+      "related": [],
+      "sprintId": "SPRINT-001",
+      "stage": "inbox",
+      "title": "CLI decision",
+      "type": "decision",
+      "updatedAt": "<new time>"
+    },
+    {
+      "affectedFiles": [
+        "src/metrics.js",
+        "src/login.js"
+      ],
+      "aliases": [],
+      "assignedAt": null,
+      "assignee": null,
+      "blockedBy": [],
+      "body": "We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. ",
+      "comments": [],
+      "createdAt": "2026-01-01T10:00:00.000Z",
+      "id": "GAP-001",
+      "pillar": "",
+      "priority": "high",
+      "related": [],
+      "sprintId": "SPRINT-001",
+      "stage": "inbox",
+      "title": "No login metrics",
+      "type": "gap",
+      "updatedAt": "2026-02-01T10:00:00.000Z"
+    }
+  ],
+  "name": "Login project",
+  "plans": [
+    {
+      "comments": [
+        {
+          "author": "claude",
+          "createdAt": "<new time>",
+          "id": "<new comment id>",
+          "text": "A plan note"
+        }
+      ],
+      "context": {
+        "designDecisions": "DD-001: cookies. See also DD-002 and DD-001.",
+        "relevantFiles": [
+          "src/login.js"
+        ],
+        "setupNotes": "Run the app locally."
+      },
+      "createdAt": "2026-01-01T10:00:00.000Z",
+      "id": "PLAN-001",
+      "sddId": "SDD-001",
+      "sprintId": "SPRINT-001",
+      "stage": "planned",
+      "tasks": [
+        {
+          "blockedBy": [],
+          "description": "Set the cookie",
+          "id": "TASK-001",
+          "passes": true,
+          "progressNotes": [
+            {
+              "text": "Done in abc123",
+              "timestamp": "2026-03-01T10:00:00.000Z"
+            }
+          ],
+          "status": "done",
+          "steps": [],
+          "title": "Write the cookie code",
+          "verification": "login test"
+        },
+        {
+          "blockedBy": [
+            "TASK-001"
+          ],
+          "description": "",
+          "id": "TASK-002",
+          "passes": false,
+          "progressNotes": [],
+          "status": "pending",
+          "steps": [],
+          "title": "Check the timeout",
+          "verification": ""
+        },
+        {
+          "blockedBy": [
+            "TASK-002"
+          ],
+          "description": "",
+          "id": "TASK-003",
+          "passes": false,
+          "progressNotes": [],
+          "status": "pending",
+          "steps": [],
+          "title": "Ship it",
+          "verification": ""
+        }
+      ],
+      "title": "Renamed through patch",
+      "updatedAt": "<new time>"
+    },
+    {
+      "comments": [],
+      "context": {
+        "designDecisions": "DD-001",
+        "relevantFiles": [
+          "a.js"
+        ],
+        "setupNotes": "Notes"
+      },
+      "createdAt": "<new time>",
+      "id": "PLAN-003",
+      "sddId": "SDD-002",
+      "sprintId": "SPRINT-001",
+      "stage": "in_progress",
+      "tasks": [
+        {
+          "blockedBy": [],
+          "description": "",
+          "id": "TASK-005",
+          "passes": true,
+          "progressNotes": [
+            {
+              "text": "started",
+              "timestamp": "<new time>"
+            },
+            {
+              "text": "done in abc123",
+              "timestamp": "<new time>"
+            }
+          ],
+          "status": "done",
+          "steps": [],
+          "title": "First",
+          "verification": ""
+        },
+        {
+          "blockedBy": [
+            "TASK-005"
+          ],
+          "description": "A body from a file.\n\nSecond paragraph.\n",
+          "id": "TASK-006",
+          "passes": true,
+          "progressNotes": [
+            {
+              "text": "Done: see commit abc123.\n",
+              "timestamp": "<new time>"
+            }
+          ],
+          "status": "done",
+          "steps": [
+            "a",
+            "b"
+          ],
+          "title": "Second",
+          "verification": "run it"
+        }
+      ],
+      "title": "CLI plan, renamed",
+      "updatedAt": "<new time>"
+    }
+  ],
+  "problemStatement": "Make login reliable and sessions longer",
+  "status": "active"
+}
+--- stderr

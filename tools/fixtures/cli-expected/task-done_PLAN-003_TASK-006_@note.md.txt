@@ -1,0 +1,25 @@
+$ pm task-done PLAN-003 TASK-006 @note.md
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "blockedBy": [
+    "TASK-005"
+  ],
+  "description": "A body from a file.\n\nSecond paragraph.\n",
+  "id": "TASK-006",
+  "passes": true,
+  "progressNotes": [
+    {
+      "text": "Done: see commit abc123.\n",
+      "timestamp": "<new time>"
+    }
+  ],
+  "status": "done",
+  "steps": [
+    "a",
+    "b"
+  ],
+  "title": "Second",
+  "verification": "run it"
+}
+--- stderr

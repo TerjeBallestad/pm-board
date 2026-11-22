@@ -1,0 +1,5 @@
+$ pm explore
+exit 1
+--- stdout
+--- stderr
+Usage: pm explore <sprint-id>

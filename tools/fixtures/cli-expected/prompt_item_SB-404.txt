@@ -1,0 +1,5 @@
+$ pm prompt item SB-404
+exit 1
+--- stdout
+--- stderr
+Error 404: {"error":"Item not found"}

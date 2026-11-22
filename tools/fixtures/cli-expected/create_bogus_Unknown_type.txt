@@ -1,0 +1,5 @@
+$ pm create bogus "Unknown type"
+exit 1
+--- stdout
+--- stderr
+Error 400: {"error":"Unknown type \"bogus\". Configured types: concern, decision, design, gap, issue, milestone, plan, sprint, task, term"}

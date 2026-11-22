@@ -1,0 +1,5 @@
+$ pm patch SB-404 --title x
+exit 1
+--- stdout
+--- stderr
+Error 404: {"error":"Not found"}

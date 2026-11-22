@@ -1,0 +1,5 @@
+$ pm patch SB-006 --stage nope
+exit 1
+--- stdout
+--- stderr
+Error 400: {"error":"Invalid stage. Must be one of: inbox, exploring, sdd, planned, done"}

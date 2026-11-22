@@ -1,0 +1,10 @@
+$ pm comment SDD-001 "A design note"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "author": "claude",
+  "createdAt": "<new time>",
+  "id": "<new comment id>",
+  "text": "A design note"
+}
+--- stderr

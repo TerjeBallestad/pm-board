@@ -1,0 +1,5 @@
+$ pm list --priority high
+exit 0
+--- stdout
+GAP-001  No login metrics
+--- stderr

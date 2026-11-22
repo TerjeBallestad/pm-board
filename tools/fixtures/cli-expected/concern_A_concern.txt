@@ -1,0 +1,23 @@
+$ pm concern "A concern"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "DC-002",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "inbox",
+  "title": "A concern",
+  "type": "concern",
+  "updatedAt": "<new time>"
+}
+--- stderr

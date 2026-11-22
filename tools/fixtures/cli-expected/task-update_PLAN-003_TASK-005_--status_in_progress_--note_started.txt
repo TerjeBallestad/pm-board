@@ -1,0 +1,20 @@
+$ pm task-update PLAN-003 TASK-005 --status in_progress --note started
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "blockedBy": [],
+  "description": "",
+  "id": "TASK-005",
+  "passes": false,
+  "progressNotes": [
+    {
+      "text": "started",
+      "timestamp": "<new time>"
+    }
+  ],
+  "status": "in_progress",
+  "steps": [],
+  "title": "First",
+  "verification": ""
+}
+--- stderr

@@ -1,0 +1,5 @@
+$ pm sdd list
+exit 0
+--- stdout
+SDD-001  Login design
+--- stderr

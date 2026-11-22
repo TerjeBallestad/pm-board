@@ -1,0 +1,43 @@
+$ pm list sprint --json
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "body": "",
+    "comments": [
+      {
+        "author": "claude",
+        "createdAt": "<new time>",
+        "id": "<new comment id>",
+        "text": "A project note"
+      }
+    ],
+    "completedAt": null,
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "SPRINT-001",
+    "name": "Login project",
+    "problemStatement": "Make login reliable and sessions longer",
+    "status": "active"
+  },
+  {
+    "body": "The project doc",
+    "comments": [],
+    "completedAt": "<new time>",
+    "createdAt": "<new time>",
+    "id": "SPRINT-002",
+    "name": "CLI project",
+    "problemStatement": "Somewhere else",
+    "status": "completed"
+  },
+  {
+    "body": "",
+    "comments": [],
+    "completedAt": null,
+    "createdAt": "<new time>",
+    "id": "SPRINT-003",
+    "name": "Second CLI project",
+    "problemStatement": "Elsewhere",
+    "status": "active"
+  }
+]
+--- stderr

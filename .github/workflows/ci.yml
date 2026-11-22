@@ -110,9 +110,14 @@ jobs:
       - run: node tools/compare-write.mjs
         env:
           PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
-      # The 1.x CLI: its copies of shared/ are current, and every command prints what 0.x prints.
+      # The 1.x CLI: its copies of shared/ are current, and every command prints its expected
+      # output (tools/fixtures/cli-expected, DD-024).
       - run: npm test
         working-directory: cli
+      - run: node tools/compare-cli.mjs --expected
+        env:
+          PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
+      # Every command also prints what 0.x prints, until the first DD that changes output (DD-024).
       - run: node tools/compare-cli.mjs
         env:
           PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board

@@ -1,0 +1,7 @@
+$ pm list --sprint SPRINT-001
+exit 0
+--- stdout
+DC-001   Cookie consent rules
+DD-001   Use cookies for the login session
+GAP-001  No login metrics
+--- stderr

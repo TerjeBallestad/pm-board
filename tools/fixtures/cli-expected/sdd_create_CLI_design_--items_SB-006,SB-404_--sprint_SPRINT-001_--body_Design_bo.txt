@@ -1,0 +1,18 @@
+$ pm sdd create "CLI design" --items SB-006,SB-404 --sprint SPRINT-001 --body "Design body"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "Design body",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "SDD-002",
+  "itemIds": [
+    "SB-006",
+    "SB-404"
+  ],
+  "sprintId": "SPRINT-001",
+  "stage": "sdd",
+  "title": "CLI design",
+  "updatedAt": "<new time>"
+}
+--- stderr

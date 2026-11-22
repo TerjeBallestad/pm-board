@@ -1,0 +1,5 @@
+$ pm get XYZ-001
+exit 1
+--- stdout
+--- stderr
+Unknown ID prefix: XYZ-001

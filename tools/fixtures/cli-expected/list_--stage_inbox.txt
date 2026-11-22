@@ -1,0 +1,10 @@
+$ pm list --stage inbox
+exit 0
+--- stdout
+DC-001    Cookie consent rules
+DD-001    Use cookies for the login session
+GAP-001   No login metrics
+SB-001    Fix the login flow
+SB-004    Claimed long ago
+TERM-001  Session
+--- stderr

@@ -1,0 +1,9 @@
+$ pm prompt item SB-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "entityId": "SB-001",
+  "entityType": "item",
+  "prompt": "# Write fixture: SB-001 (issue, unset)\n\nThis is the board's own template, not the built-in one.\n\nFix the login flow\n\nUsers cannot log in after a session ends.\n\n\nFiles:\n- `src/login.js`\n\nRelated:\n### SB-002: Session timeout too short\nThe session ends after five minutes....\n\nComments:\n**terje** (2026-02-01T10:00:00.000Z):\nSeen on the phone too\n\n"
+}
+--- stderr

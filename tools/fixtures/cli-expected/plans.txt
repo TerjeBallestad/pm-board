@@ -1,0 +1,6 @@
+$ pm plans
+exit 0
+--- stdout
+PLAN-002  Old plan with a label as a blocker
+PLAN-001  Login plan
+--- stderr

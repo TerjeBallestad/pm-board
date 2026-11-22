@@ -1,0 +1,5 @@
+$ pm get
+exit 1
+--- stdout
+--- stderr
+Usage: pm get <id>

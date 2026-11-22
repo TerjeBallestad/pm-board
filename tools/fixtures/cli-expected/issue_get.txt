@@ -1,0 +1,7 @@
+$ pm issue get
+exit 1
+--- stdout
+--- stderr
+"get" looks like a subcommand, not a title — refusing to create a issue named "get".
+  To list:   pm list issue   (or: pm issue list)
+  To create: pm issue "a real title"

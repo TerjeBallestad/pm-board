@@ -1,0 +1,7 @@
+$ pm list --limit 2
+exit 0
+--- stdout
+… 7 older hidden (use --all or --limit N)
+SB-004    Claimed long ago
+TERM-001  Session
+--- stderr

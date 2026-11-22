@@ -1,0 +1,5 @@
+$ pm list plan --sprint SPRINT-001
+exit 0
+--- stdout
+PLAN-001  Login plan
+--- stderr

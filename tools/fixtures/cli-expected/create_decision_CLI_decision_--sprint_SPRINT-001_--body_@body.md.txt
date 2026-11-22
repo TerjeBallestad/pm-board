@@ -1,0 +1,23 @@
+$ pm create decision "CLI decision" --sprint SPRINT-001 --body @body.md
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "A body from a file.\n\nSecond paragraph.\n",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "DD-003",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "title": "CLI decision",
+  "type": "decision",
+  "updatedAt": "<new time>"
+}
+--- stderr

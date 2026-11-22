@@ -1,0 +1,17 @@
+$ pm project SPRINT-002 --json
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "The project doc",
+  "comments": [],
+  "completedAt": "<new time>",
+  "createdAt": "<new time>",
+  "designs": [],
+  "id": "SPRINT-002",
+  "items": [],
+  "name": "CLI project",
+  "plans": [],
+  "problemStatement": "Somewhere else",
+  "status": "completed"
+}
+--- stderr

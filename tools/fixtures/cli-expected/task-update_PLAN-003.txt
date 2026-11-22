@@ -1,0 +1,5 @@
+$ pm task-update PLAN-003
+exit 1
+--- stdout
+--- stderr
+Usage: pm task-update <plan-id> <task-id> [--status S] [--passes true|false] [--note N | @file.md | -]

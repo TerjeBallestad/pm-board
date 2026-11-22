@@ -1,0 +1,27 @@
+$ pm glossary --json
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "affectedFiles": [],
+    "aliases": [
+      "sessions"
+    ],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "The time a user stays logged in.",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "TERM-001",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Session",
+    "type": "term",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  }
+]
+--- stderr

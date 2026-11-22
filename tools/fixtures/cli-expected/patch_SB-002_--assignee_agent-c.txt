@@ -1,0 +1,25 @@
+$ pm patch SB-002 --assignee agent-c
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": "<new time>",
+  "assignee": "agent-c",
+  "blockedBy": [
+    "SB-001"
+  ],
+  "body": "The session ends after five minutes.",
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "id": "SB-002",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "exploring",
+  "title": "Session timeout too short",
+  "type": "issue",
+  "updatedAt": "<new time>"
+}
+--- stderr

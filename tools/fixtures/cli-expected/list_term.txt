@@ -1,0 +1,5 @@
+$ pm list term
+exit 0
+--- stdout
+TERM-001  Session
+--- stderr

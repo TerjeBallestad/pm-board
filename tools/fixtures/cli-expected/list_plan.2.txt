@@ -1,0 +1,7 @@
+$ pm list plan
+exit 0
+--- stdout
+PLAN-003  CLI plan, renamed
+PLAN-002  Old plan with a label as a blocker
+PLAN-001  Renamed through patch
+--- stderr

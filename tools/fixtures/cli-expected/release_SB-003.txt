@@ -1,0 +1,23 @@
+$ pm release SB-003
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "doneAt": "2026-03-01T10:00:00.000Z",
+  "id": "SB-003",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "done",
+  "title": "Old done work",
+  "type": "issue",
+  "updatedAt": "<new time>"
+}
+--- stderr

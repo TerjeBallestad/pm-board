@@ -1,0 +1,6 @@
+$ pm plan create
+(stdin "")
+exit 1
+--- stdout
+--- stderr
+Usage: pm plan create < plan.json

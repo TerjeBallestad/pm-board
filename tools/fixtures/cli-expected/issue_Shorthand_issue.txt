@@ -1,0 +1,23 @@
+$ pm issue "Shorthand issue"
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "SB-008",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": null,
+  "stage": "inbox",
+  "title": "Shorthand issue",
+  "type": "issue",
+  "updatedAt": "<new time>"
+}
+--- stderr

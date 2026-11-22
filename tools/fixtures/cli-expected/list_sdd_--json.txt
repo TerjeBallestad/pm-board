@@ -1,0 +1,68 @@
+$ pm list sdd --json
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "body": "How login works.",
+    "comments": [
+      {
+        "author": "claude",
+        "createdAt": "<new time>",
+        "id": "<new comment id>",
+        "text": "A design note"
+      }
+    ],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "SDD-001",
+    "itemIds": [
+      "SB-001"
+    ],
+    "sprintId": "SPRINT-001",
+    "stage": "sdd",
+    "tests": [
+      {
+        "claims": [],
+        "file": "tests/design.test.js",
+        "name": "design_test",
+        "summary": "Design holds"
+      }
+    ],
+    "title": "Login design",
+    "updatedAt": "<new time>"
+  },
+  {
+    "body": "Design body",
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SDD-002",
+    "itemIds": [
+      "SB-006",
+      "SB-404"
+    ],
+    "sprintId": "SPRINT-001",
+    "stage": "planned",
+    "title": "CLI design",
+    "updatedAt": "<new time>"
+  },
+  {
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SDD-003",
+    "itemIds": [],
+    "sprintId": null,
+    "stage": "sdd",
+    "title": "Shorthand design",
+    "updatedAt": "<new time>"
+  },
+  {
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SDD-004",
+    "itemIds": [],
+    "sprintId": null,
+    "stage": "sdd",
+    "title": "list",
+    "updatedAt": "<new time>"
+  }
+]
+--- stderr

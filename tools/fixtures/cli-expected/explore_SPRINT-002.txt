@@ -1,0 +1,8 @@
+$ pm explore SPRINT-002
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "dossier": "# Sprint Dossier: CLI project\n\n**ID:** SPRINT-002 | **Status:** completed | **Created:** <new time>\n\n## Problem Statement\n\nSomewhere else\n\n## Knowledge Base Queries\n\nRun these to gather design context:\n\n```\necho kb: \"cli project\"\n```\n\n```\necho kb: \"somewhere else\"\n```\n\n",
+  "sprint": "SPRINT-002"
+}
+--- stderr

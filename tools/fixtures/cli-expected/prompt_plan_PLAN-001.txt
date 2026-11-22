@@ -1,0 +1,9 @@
+$ pm prompt plan PLAN-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "entityId": "PLAN-001",
+  "entityType": "plan",
+  "prompt": "# PLAN-001: Login plan\n\n## Setup\n\nRun the app locally.\n\n## Design Decisions\n\nDD-001: cookies. See also DD-002 and DD-001.\n\n## Relevant Files\n\n- `src/login.js`\n\n## Design Document: SDD-001 — Login design\n\nHow login works.\n\n## Tasks\n\n- [x] **TASK-001**: Write the cookie code\n  Set the cookie\n  Verify: login test\n- [ ] **TASK-002**: Check the timeout (blocked by: TASK-001)\n- [ ] **TASK-003**: Ship it (blocked by: TASK-002)\n"
+}
+--- stderr

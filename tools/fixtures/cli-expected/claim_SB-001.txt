@@ -1,0 +1,6 @@
+$ pm claim SB-001
+exit 1
+--- stdout
+--- stderr
+Usage: pm claim <id> --as "session label"
+A claim needs an assignee label (who is working this ticket).

@@ -1,0 +1,15 @@
+$ pm sdd create list
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "SDD-004",
+  "itemIds": [],
+  "sprintId": null,
+  "stage": "sdd",
+  "title": "list",
+  "updatedAt": "<new time>"
+}
+--- stderr

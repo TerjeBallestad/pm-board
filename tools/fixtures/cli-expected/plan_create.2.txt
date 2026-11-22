@@ -1,0 +1,6 @@
+$ pm plan create
+(stdin "{ not json")
+exit 1
+--- stdout
+--- stderr
+Invalid JSON: <JSON.parse message>

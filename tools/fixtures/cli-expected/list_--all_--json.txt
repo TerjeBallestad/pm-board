@@ -1,0 +1,316 @@
+$ pm list --all --json
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "DC-001",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": "SPRINT-001",
+    "stage": "inbox",
+    "title": "Cookie consent rules",
+    "type": "concern",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "DC-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "A concern",
+    "type": "concern",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Cookies, not tokens in local storage.\nSecond line.",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "DD-001",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": "SPRINT-001",
+    "stage": "inbox",
+    "tests": [
+      {
+        "claims": [],
+        "file": "tests/login.test.js",
+        "name": "login_cookie_test",
+        "summary": "Login sets a cookie"
+      }
+    ],
+    "title": "Use cookies for the login session",
+    "type": "decision",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "doneAt": "2026-03-01T10:00:00.000Z",
+    "id": "DD-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "done",
+    "title": "An old settled decision",
+    "type": "decision",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Patched through the shorthand",
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "DD-003",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": "SPRINT-001",
+    "stage": "inbox",
+    "title": "CLI decision",
+    "type": "decision",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [
+      "src/metrics.js",
+      "src/login.js"
+    ],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. We cannot see how often login fails. ",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "GAP-001",
+    "pillar": "",
+    "priority": "high",
+    "related": [],
+    "sprintId": "SPRINT-001",
+    "stage": "inbox",
+    "title": "No login metrics",
+    "type": "gap",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "A body from stdin.",
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "GAP-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "From stdin",
+    "type": "gap",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [
+      "src/login.js"
+    ],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Users cannot log in after a session ends.\n",
+    "comments": [
+      {
+        "author": "terje",
+        "createdAt": "2026-02-01T10:00:00.000Z",
+        "id": "c1767261600000",
+        "text": "Seen on the phone too"
+      },
+      {
+        "author": "claude",
+        "createdAt": "<new time>",
+        "id": "<new comment id>",
+        "text": "A CLI comment"
+      },
+      {
+        "author": "agent-a",
+        "createdAt": "<new time>",
+        "id": "<new comment id>",
+        "text": "Signed"
+      }
+    ],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "SB-001",
+    "pillar": "core",
+    "priority": null,
+    "related": [
+      "SB-002"
+    ],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Fix the login flow",
+    "type": "issue",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": "<new time>",
+    "assignee": "agent-c",
+    "blockedBy": [
+      "SB-001"
+    ],
+    "body": "The session ends after five minutes.",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "SB-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "exploring",
+    "title": "Session timeout too short",
+    "type": "issue",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [
+      "a.js",
+      "b.js"
+    ],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Inline body",
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SB-006",
+    "pillar": "auth",
+    "priority": "high",
+    "related": [
+      "SB-001",
+      "SB-002"
+    ],
+    "sprintId": null,
+    "stage": "sdd",
+    "title": "CLI issue, renamed",
+    "type": "issue",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [
+      "SB-006"
+    ],
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SB-007",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Blocked one",
+    "type": "issue",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "SB-008",
+    "pillar": "",
+    "priority": "low",
+    "related": [],
+    "sprintId": null,
+    "stage": "exploring",
+    "title": "Shorthand issue",
+    "type": "issue",
+    "updatedAt": "<new time>"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [
+      "sessions"
+    ],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "The time a user stays logged in.",
+    "comments": [],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "TERM-001",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Session",
+    "type": "term",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "affectedFiles": [],
+    "aliases": [
+      "boards"
+    ],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "One repo's whole board.",
+    "comments": [],
+    "createdAt": "<new time>",
+    "id": "TERM-002",
+    "pillar": "",
+    "priority": null,
+    "related": [],
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Board",
+    "type": "term",
+    "updatedAt": "<new time>"
+  }
+]
+--- stderr

@@ -1,0 +1,6 @@
+$ pm task-done PLAN-003 TASK-404 -
+(stdin "from stdin")
+exit 1
+--- stdout
+--- stderr
+Error 404: {"error":"Task not found"}

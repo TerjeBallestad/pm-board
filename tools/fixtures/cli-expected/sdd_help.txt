@@ -1,0 +1,7 @@
+$ pm sdd help
+exit 1
+--- stdout
+--- stderr
+"help" looks like a subcommand, not a title — refusing to create a sdd named "help".
+  To list:   pm list sdd   (or: pm sdd list)
+  To create: pm sdd "a real title"

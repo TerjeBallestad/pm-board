@@ -1,0 +1,19 @@
+$ pm project SPRINT-001
+exit 0
+--- stdout
+SPRINT-001  Login project  (active)
+Destination: Make login reliable and sessions longer
+
+Items (0/3 done):
+  DC-001   inbox  Cookie consent rules
+  DD-001   inbox  Use cookies for the login session
+  GAP-001  inbox  No login metrics  [high]
+
+Designs (1):
+  SDD-001  Login design
+
+Plans (1):
+  PLAN-001  Login plan  tasks 1/3
+
+Drill down: pm get <id> · full JSON: pm project SPRINT-001 --json
+--- stderr

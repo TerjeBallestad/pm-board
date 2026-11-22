@@ -1,0 +1,10 @@
+$ pm archive SB-004 SB-404
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "archived": 1,
+  "ids": [
+    "SB-004"
+  ]
+}
+--- stderr

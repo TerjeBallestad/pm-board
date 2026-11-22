@@ -1,0 +1,14 @@
+$ pm design SDD-003
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "SDD-003",
+  "itemIds": [],
+  "sprintId": null,
+  "stage": "sdd",
+  "title": "Shorthand design",
+  "updatedAt": "<new time>"
+}
+--- stderr

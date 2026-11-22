@@ -1,0 +1,22 @@
+$ pm concern DC-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "id": "DC-001",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "title": "Cookie consent rules",
+  "type": "concern",
+  "updatedAt": "2026-02-01T10:00:00.000Z"
+}
+--- stderr

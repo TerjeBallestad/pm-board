@@ -1,0 +1,64 @@
+$ pm plan-update PLAN-003 --title "CLI plan, renamed" --stage in_progress
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "comments": [],
+  "context": {
+    "designDecisions": "DD-001",
+    "relevantFiles": [
+      "a.js"
+    ],
+    "setupNotes": "Notes"
+  },
+  "createdAt": "<new time>",
+  "id": "PLAN-003",
+  "sddId": "SDD-002",
+  "sprintId": "SPRINT-001",
+  "stage": "in_progress",
+  "tasks": [
+    {
+      "blockedBy": [],
+      "description": "",
+      "id": "TASK-005",
+      "passes": true,
+      "progressNotes": [
+        {
+          "text": "started",
+          "timestamp": "<new time>"
+        },
+        {
+          "text": "done in abc123",
+          "timestamp": "<new time>"
+        }
+      ],
+      "status": "done",
+      "steps": [],
+      "title": "First",
+      "verification": ""
+    },
+    {
+      "blockedBy": [
+        "TASK-005"
+      ],
+      "description": "A body from a file.\n\nSecond paragraph.\n",
+      "id": "TASK-006",
+      "passes": true,
+      "progressNotes": [
+        {
+          "text": "Done: see commit abc123.\n",
+          "timestamp": "<new time>"
+        }
+      ],
+      "status": "done",
+      "steps": [
+        "a",
+        "b"
+      ],
+      "title": "Second",
+      "verification": "run it"
+    }
+  ],
+  "title": "CLI plan, renamed",
+  "updatedAt": "<new time>"
+}
+--- stderr

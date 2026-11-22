@@ -1,0 +1,5 @@
+$ pm project create
+exit 1
+--- stdout
+--- stderr
+Usage: pm project create "name" [--destination "..."] [--body "markdown doc"]

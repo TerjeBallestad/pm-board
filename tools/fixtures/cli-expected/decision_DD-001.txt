@@ -1,0 +1,31 @@
+$ pm decision DD-001
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "Cookies, not tokens in local storage.\nSecond line.",
+  "comments": [],
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "id": "DD-001",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "tests": [
+    {
+      "claims": [],
+      "file": "tests/login.test.js",
+      "name": "login_cookie_test",
+      "summary": "Login sets a cookie"
+    }
+  ],
+  "title": "Use cookies for the login session",
+  "type": "decision",
+  "updatedAt": "2026-02-01T10:00:00.000Z"
+}
+--- stderr

@@ -1,0 +1,14 @@
+$ pm sprint create "Second CLI project" --problem-statement Elsewhere
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "body": "",
+  "comments": [],
+  "completedAt": null,
+  "createdAt": "<new time>",
+  "id": "SPRINT-003",
+  "name": "Second CLI project",
+  "problemStatement": "Elsewhere",
+  "status": "active"
+}
+--- stderr

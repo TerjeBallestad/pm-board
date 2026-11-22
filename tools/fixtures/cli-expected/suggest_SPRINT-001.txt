@@ -1,0 +1,37 @@
+$ pm suggest SPRINT-001
+exit 0
+--- stdout (JSON, keys sorted)
+[
+  {
+    "affectedFiles": [
+      "src/login.js"
+    ],
+    "aliases": [],
+    "assignedAt": null,
+    "assignee": null,
+    "blockedBy": [],
+    "body": "Users cannot log in after a session ends.\n",
+    "comments": [
+      {
+        "author": "terje",
+        "createdAt": "2026-02-01T10:00:00.000Z",
+        "id": "c1767261600000",
+        "text": "Seen on the phone too"
+      }
+    ],
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "id": "SB-001",
+    "pillar": "core",
+    "priority": null,
+    "related": [
+      "SB-002"
+    ],
+    "relevanceScore": 1,
+    "sprintId": null,
+    "stage": "inbox",
+    "title": "Fix the login flow",
+    "type": "issue",
+    "updatedAt": "2026-02-01T10:00:00.000Z"
+  }
+]
+--- stderr
