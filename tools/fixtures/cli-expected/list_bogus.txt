@@ -1,5 +1,5 @@
 $ pm list bogus
-exit 1
+exit 2
 --- stdout
 --- stderr
 Unknown list type "bogus". Known: concern, decision, gap, issue, plan, sdd, sprint, term

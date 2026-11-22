@@ -1,5 +1,5 @@
 $ pm create sprint "Not this way"
-exit 1
+exit 2
 --- stdout
 --- stderr
 "sprint" is not a generic item type. Use: pm sprint create "name"

@@ -79,7 +79,8 @@ It runs one script of about 90 requests against 0.x (on a temp copy of
 `tools/fixtures/write-board`) and against 1.x (the same board imported under a new slug, on a
 server it starts), and compares each answer and then every read route after each step. CI runs it.
 
-To check the CLI against 0.x, the same way:
+To check the CLI against 0.x, the same way (no longer in CI: from DD-025, help and exit codes
+differ from 0.x on purpose, so this shows those differences; every other output still matches):
 
 ```sh
 PMB_PG=postgres://pm_board:pm_board@localhost:5432/pm_board node tools/compare-cli.mjs

@@ -1,9 +1,9 @@
 $ pm patch --help
 exit 0
 --- stdout
-Usage: pm patch <id> [--key value ...]
+Usage: pm patch <id> [--field value ...]
 
-Update any field on an item, design, or plan.
+Update any field on an item, design, or plan. The server refuses a field it does not know.
 
 Items (SB, DD, DC, GAP, ...):
   --title T            Rename
@@ -15,9 +15,10 @@ Items (SB, DD, DC, GAP, ...):
   --files f1,f2         Set affected files (comma-separated)
   --related IDs         Set related IDs (comma-separated, e.g. SDD-060,DD-042)
   --blockedBy IDs       Set blocking edges (comma-separated; '' clears). Items whose
-                        blockers are all done/archived show in "pm list --frontier"
+                        blockers are all done/archived show in "pm ready"
   --assignee LABEL      Force-set/override a claim ('' clears). Normal claiming
                         goes through "pm claim <id> --as LABEL" (conflict-checked)
+  --aliases a,b         A term's inflections
 
 Designs (SDD):
   --title T             Rename
@@ -33,7 +34,12 @@ Plans (PLAN):
   --sprint SPRINT-NNN   Assign to sprint
   --tasks @file.json    Replace all tasks from JSON file
 
-Sprints (SPRINT):
+Projects (SPRINT):
   --name N              Rename
   --status S            Set status (active, completed)
+
+Examples:
+  pm patch SB-042 --stage done
+  pm patch SB-042 --blockedBy SB-040,SB-041
+  pm patch SB-042 --assignee ''
 --- stderr

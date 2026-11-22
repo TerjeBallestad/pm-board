@@ -1,6 +1,6 @@
 $ pm frobnicate
-exit 1
+exit 2
 --- stdout
 --- stderr
-Unknown command: frobnicate
-Run: pm --help
+Unknown command: frobnicate.
+Run "pm help" to see every command.

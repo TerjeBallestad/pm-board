@@ -1,5 +1,5 @@
 $ pm issue get
-exit 1
+exit 2
 --- stdout
 --- stderr
 "get" looks like a subcommand, not a title — refusing to create a issue named "get".

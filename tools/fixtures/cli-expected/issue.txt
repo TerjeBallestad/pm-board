@@ -1,5 +1,5 @@
 $ pm issue
-exit 1
+exit 2
 --- stdout
 --- stderr
 Usage: pm issue <id or "title">

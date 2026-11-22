@@ -1,5 +1,5 @@
 $ pm sdd create
-exit 1
+exit 2
 --- stdout
 --- stderr
 Usage: pm sdd create "title" [--body B] [--items IDs] [--sprint ID]

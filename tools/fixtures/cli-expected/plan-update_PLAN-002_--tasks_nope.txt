@@ -1,5 +1,5 @@
 $ pm plan-update PLAN-002 --tasks nope
-exit 1
+exit 2
 --- stdout
 --- stderr
 Invalid JSON for --tasks: <JSON.parse message>

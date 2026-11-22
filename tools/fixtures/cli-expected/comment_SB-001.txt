@@ -1,5 +1,5 @@
 $ pm comment SB-001
-exit 1
+exit 2
 --- stdout
 --- stderr
 Usage: pm comment <id> "text" [--author A]

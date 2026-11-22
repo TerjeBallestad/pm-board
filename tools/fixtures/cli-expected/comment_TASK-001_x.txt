@@ -1,5 +1,5 @@
 $ pm comment TASK-001 x
-exit 1
+exit 2
 --- stdout
 --- stderr
 Comments not supported for prefix: TASK-001

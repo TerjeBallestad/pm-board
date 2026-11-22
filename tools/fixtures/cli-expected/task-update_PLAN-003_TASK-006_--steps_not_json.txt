@@ -1,5 +1,5 @@
 $ pm task-update PLAN-003 TASK-006 --steps "not json"
-exit 1
+exit 2
 --- stdout
 --- stderr
 Invalid JSON for --steps: <JSON.parse message>

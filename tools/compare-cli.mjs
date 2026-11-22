@@ -441,7 +441,7 @@ mkdirSync(join(repoA, 'nested'), { recursive: true });
 mkdirSync(repoB, { recursive: true });
 const pmJson = (dir) => parse(readFileSync(join(dir, '.pm.json'), 'utf8')).value;
 const only = [
-  ['init with no slug is a usage error', () => v1In(repoA, ['init']), (r) => r.code === 1 && /Usage: pm init <slug>/.test(r.stderr)],
+  ['init with no slug is a usage error', () => v1In(repoA, ['init']), (r) => r.code === 2 && /Usage: pm init <slug>/.test(r.stderr)],
   ['init with no token is 401 and writes no .pm.json', () => v1In(repoA, ['init', newSlug], { PM_TOKEN: '' }), (r) => r.code === 1 && /Error 401/.test(r.stderr) && /PM_TOKEN/.test(r.stderr)],
   ['init creates the board and writes .pm.json', () => v1In(repoA, ['init', newSlug, '--name', 'Init board']), (r) => r.code === 0 && /Created board "Init board"/.test(r.stdout) && pmJson(repoA)?.board === newSlug],
   ['init again in the same folder is refused', () => v1In(repoA, ['init', newSlug]), (r) => r.code === 1 && /already exists/.test(r.stderr)],
@@ -463,6 +463,24 @@ const only = [
   }, (r) => r.code === 0 && /From the config file/.test(r.stdout)],
   ['no .pm.json is an error that names pm init', () => v1In(tmpdir(), ['list']), (r) => r.code === 1 && /pm init <slug>/.test(r.stderr)],
   ['serve, start and stop print a note', () => v1In(repoA, ['serve']), (r) => r.code === 0 && /gone in pm 1.x/.test(r.stdout)],
+  // The command table (PLAN-003 Task 3, DD-025): help per command, --version, did-you-mean, flag checks.
+  ['--version prints the version', () => v1In(repoA, ['--version']), (r) => r.code === 0 && /^pm \d+\.\d+\.\d+/.test(r.stdout)],
+  ['pm help lists the commands by group', () => v1In(repoA, ['help']), (r) => r.code === 0 && /^Read:$/m.test(r.stdout) && /^  ready /m.test(r.stdout) && !/^  sdds /m.test(r.stdout)],
+  ['every command has its own help', () => {
+    const names = ['get', 'list', 'ready', 'glossary', 'create', 'patch', 'comment', 'claim', 'release', 'archive', 'plan', 'next-task', 'task-update', 'task-done', 'plan-update', 'project', 'issue', 'sdd', 'sweep', 'explore', 'suggest', 'prompt', 'review', 'init', 'update', 'health'];
+    const bad = names.filter((n) => { const r = v1In(repoA, ['help', n]); return r.code !== 0 || !r.stdout.startsWith(`Usage: pm ${n}`); });
+    return { code: bad.length, stdout: bad.join(','), stderr: '' };
+  }, (r) => r.code === 0],
+  ['pm <command> --help is that command\'s help', () => v1In(repoA, ['create', '--help']), (r) => r.code === 0 && r.stdout.startsWith('Usage: pm create') && /--priority P/.test(r.stdout)],
+  ['show is get', () => v1In(repoA, ['show', 'SB-001', '--brief']), (r) => r.code === 0 && parse(r.stdout).value?.id === 'SB-001'],
+  ['ready is list --frontier', () => v1In(repoA, ['ready']), (r) => r.code === 0 && r.stdout === v1In(repoA, ['list', '--frontier']).stdout],
+  ['a typo command gets did-you-mean and exit 2', () => v1In(repoA, ['lsit']), (r) => r.code === 2 && /Did you mean: pm list\?/.test(r.stderr) && r.stdout === ''],
+  ['a guessed command names the right one', () => v1In(repoA, ['view', 'SB-001']), (r) => r.code === 2 && /Did you mean: pm get\?/.test(r.stderr)],
+  ['an unknown flag is refused with a suggestion', () => v1In(repoA, ['list', '--status', 'done']), (r) => r.code === 2 && /Unknown flag --status for pm list\. Did you mean --stage\?/.test(r.stderr)],
+  ['patch passes any field to the server', () => v1In(repoA, ['patch', 'SB-001', '--prioritty', 'high']), (r) => r.code === 1 && /Unknown field/.test(r.stderr)],
+  ['update with arguments never runs npm', () => v1In(repoA, ['update', 'SB-001', '--stage', 'done']), (r) => r.code === 2 && /takes no arguments/.test(r.stderr) && !/Updating/.test(r.stdout)],
+  ['a usage error exits 2', () => v1In(repoA, ['get']), (r) => r.code === 2 && /Usage: pm get <id>/.test(r.stderr)],
+  ['an API error still exits 1', () => v1In(repoA, ['get', 'SB-999']), (r) => r.code === 1 && /^Error 404/.test(r.stderr)],
   ['a server that does not answer names its url', () => v1In(repoA, ['list'], { PM_URL: 'http://127.0.0.1:9' }), (r) => r.code === 1 && /Cannot reach the pm server at http:\/\/127.0.0.1:9/.test(r.stderr)],
 ];
 for (const [name, act, ok] of only) {

@@ -1,5 +1,5 @@
 $ pm plan nope
-exit 1
+exit 2
 --- stdout
 --- stderr
 Usage: pm plan <PLAN-id> | pm plan create < plan.json

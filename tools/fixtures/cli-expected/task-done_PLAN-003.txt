@@ -1,5 +1,5 @@
 $ pm task-done PLAN-003
-exit 1
+exit 2
 --- stdout
 --- stderr
 Usage: pm task-done <plan-id> <task-id> "progress note" | @file.md | -

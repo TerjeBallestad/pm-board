@@ -117,10 +117,6 @@ jobs:
       - run: node tools/compare-cli.mjs --expected
         env:
           PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
-      # Every command also prints what 0.x prints, until the first DD that changes output (DD-024).
-      - run: node tools/compare-cli.mjs
-        env:
-          PMB_PG: postgres://pm_board:pm_board@localhost:5432/pm_board
       # The exporter for pm-data: 0.x reads the export as the board the server serves (DD-022).
       - run: node tools/compare-export.mjs
         env:

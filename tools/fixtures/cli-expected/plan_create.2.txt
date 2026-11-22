@@ -1,6 +1,6 @@
 $ pm plan create
 (stdin "{ not json")
-exit 1
+exit 2
 --- stdout
 --- stderr
 Invalid JSON: <JSON.parse message>
