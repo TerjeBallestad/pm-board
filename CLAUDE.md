@@ -79,6 +79,10 @@ Red-green: when you add a test, break the code it guards once and watch it fail.
 - **jsonb** keeps no key order, and a typed column cannot tell a missing field from null. The golden
   tools compare as data for that reason (server/docs/data-model.md, "Known differences").
 - A 0.x board's data dir can hold its own `.git`: the tools skip hidden folders.
+- **Colima shares only `$HOME` with its VM.** A `docker run -v` of a `mktemp -d` folder (under
+  /var/folders) mounts an empty folder, and the container prints nothing. Use a folder under `$HOME`.
+- **`.gitignore` has `bin/` for .NET**, and `!cli/bin/` lets the CLI's command in. A new `bin/`
+  folder outside server/ needs the same exception.
 
 ## Working in parallel
 
