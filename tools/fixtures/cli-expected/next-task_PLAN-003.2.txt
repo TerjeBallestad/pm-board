@@ -4,6 +4,9 @@ exit 0
 {
   "allComplete": true,
   "designDecisions": "DD-001",
+  "more": "One task in full: pm get TASK-NNN. Every task in full: pm next-task PLAN-003 --json",
+  "next": null,
+  "planId": "PLAN-003",
   "planTitle": "CLI plan",
   "progress": {
     "completed": 2,
@@ -19,47 +22,23 @@ exit 0
   ],
   "tasks": [
     {
-      "blockedBy": [],
-      "description": "",
       "id": "TASK-005",
+      "lastNote": "done in abc123",
       "passes": true,
-      "progressNotes": [
-        {
-          "text": "started",
-          "timestamp": "<new time>"
-        },
-        {
-          "text": "done in abc123",
-          "timestamp": "<new time>"
-        }
-      ],
       "status": "done",
-      "steps": [],
       "title": "First",
-      "unblocked": true,
-      "verification": ""
+      "unblocked": true
     },
     {
       "blockedBy": [
         "TASK-005"
       ],
-      "description": "A body from a file.\n\nSecond paragraph.\n",
       "id": "TASK-006",
+      "lastNote": "Done: see commit abc123.",
       "passes": true,
-      "progressNotes": [
-        {
-          "text": "Done: see commit abc123.\n",
-          "timestamp": "<new time>"
-        }
-      ],
       "status": "done",
-      "steps": [
-        "a",
-        "b"
-      ],
       "title": "Second",
-      "unblocked": true,
-      "verification": "run it"
+      "unblocked": true
     }
   ]
 }

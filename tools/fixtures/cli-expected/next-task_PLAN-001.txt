@@ -4,6 +4,22 @@ exit 0
 {
   "allComplete": false,
   "designDecisions": "DD-001: cookies. See also DD-002 and DD-001.",
+  "more": "One task in full: pm get TASK-NNN. Every task in full: pm next-task PLAN-001 --json",
+  "next": {
+    "blockedBy": [
+      "TASK-001"
+    ],
+    "description": "",
+    "id": "TASK-002",
+    "passes": false,
+    "progressNotes": [],
+    "status": "pending",
+    "steps": [],
+    "title": "Check the timeout",
+    "unblocked": true,
+    "verification": ""
+  },
+  "planId": "PLAN-001",
   "planTitle": "Login plan",
   "progress": {
     "completed": 1,
@@ -19,49 +35,32 @@ exit 0
   ],
   "tasks": [
     {
-      "blockedBy": [],
-      "description": "Set the cookie",
       "id": "TASK-001",
+      "lastNote": "Done in abc123",
       "passes": true,
-      "progressNotes": [
-        {
-          "text": "Done in abc123",
-          "timestamp": "2026-03-01T10:00:00.000Z"
-        }
-      ],
       "status": "done",
-      "steps": [],
       "title": "Write the cookie code",
-      "unblocked": true,
-      "verification": "login test"
+      "unblocked": true
     },
     {
       "blockedBy": [
         "TASK-001"
       ],
-      "description": "",
       "id": "TASK-002",
       "passes": false,
-      "progressNotes": [],
       "status": "pending",
-      "steps": [],
       "title": "Check the timeout",
-      "unblocked": true,
-      "verification": ""
+      "unblocked": true
     },
     {
       "blockedBy": [
         "TASK-002"
       ],
-      "description": "",
       "id": "TASK-003",
       "passes": false,
-      "progressNotes": [],
       "status": "pending",
-      "steps": [],
       "title": "Ship it",
-      "unblocked": false,
-      "verification": ""
+      "unblocked": false
     }
   ]
 }

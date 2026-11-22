@@ -13,7 +13,7 @@ import {
   api, httpJson, flags, positional, state, usageError, hasRequestFlags, isRequestFlag, loadConfig,
   runKnowledgeQuery, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
 } from './runtime.js';
-import { printList, fetchTerms, printGlossary, printGlossaryFooter, printSprintOverview } from './output.js';
+import { printList, fetchTerms, printGlossary, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary } from './output.js';
 import {
   fetchListByType, routeById, commentRoute, expandFileArg, resolveBody, buildItemBody,
   buildPatchBody, rejectCommandWordTitle
@@ -46,23 +46,25 @@ const get = {
   name: 'get', aliases: ['show'], group: 'Read',
   synopsis: 'get <id> [--brief]', usage: 'get <id> [--brief]',
   summary: 'One record as JSON; the terms it mentions follow',
-  help: 'Shows an item, design, plan or project by its id. The glossary terms that its title, body\nand comments mention are listed after it, on stderr, so stdout stays pure JSON.',
+  help: 'Shows an item, design, plan, project or task by its id. A task comes with its planId. The\nglossary terms that its title, body and comments mention are listed after it, on stderr, so\nstdout stays pure JSON.',
   flags: ['brief'],
   flagHelp: [['--brief', 'Leave out the body and comments; show their sizes instead']],
-  examples: ['pm get SB-042', 'pm get PLAN-003 --brief'],
+  examples: ['pm get SB-042', 'pm get TASK-021', 'pm get PLAN-003 --brief'],
   async run() {
     const id = positional[0];
     if (!id) usageError('Usage: pm get <id>');
+    // A task by its key (DD-026). 0.x refused: tasks were read through their plan.
+    const path = /^TASK-\d+$/i.test(id) ? `/api/tasks/${id}` : routeById(id);
     if (flags.brief === 'true') {
       // Metadata-only view: everything except the large free-text fields,
       // with size hints so agents know when a full `pm get` is worth it.
-      const entity = await api('GET', routeById(id), undefined, { silent: true });
+      const entity = await api('GET', path, undefined, { silent: true });
       const { body, comments, ...rest } = entity;
       if (body) rest.bodyChars = body.length;
       if (comments?.length) rest.commentCount = comments.length;
       process.stdout.write(JSON.stringify(rest, null, 2) + '\n');
     } else {
-      const entity = await api('GET', routeById(id), undefined, { silent: true });
+      const entity = await api('GET', path, undefined, { silent: true });
       process.stdout.write(JSON.stringify(entity, null, 2) + '\n');
       await printGlossaryFooter(entity);
     }
@@ -252,11 +254,12 @@ const archive = {
 
 const plan = {
   name: 'plan', group: 'Plans and tasks',
-  synopsis: 'plan <id>', usage: ['plan <PLAN-id>', 'plan create < plan.json', 'plan list [--sprint ID]'],
-  summary: 'One plan with its tasks (pm plan create < plan.json makes one)',
-  help: 'Shows a plan with every task, or creates one from JSON on stdin:\n{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}',
+  synopsis: 'plan <id> [--json]', usage: ['plan <PLAN-id> [--json]', 'plan create < plan.json', 'plan list [--sprint ID]'],
+  summary: 'A plan\'s overview: one line per task, and the next task',
+  help: 'Shows a plan: its project and notes in short, one line per task with its status and open\nblockers, and the next task. pm get TASK-NNN reads one task in full; --json gives the whole\nplan. With create: a new plan from JSON on stdin:\n{"title": ..., "sprintId": ..., "context": {...}, "tasks": [{"title": ..., "blockedBy": ["Task 1"]}]}',
   flags: ['sprint', 'all', 'limit', 'json'],
-  examples: ['pm plan PLAN-003', 'pm plan create < plan.json'],
+  flagHelp: [['--json', 'The whole plan, every task in full']],
+  examples: ['pm plan PLAN-003', 'pm get TASK-021', 'pm plan create < plan.json'],
   async run() {
     const action = positional[0];
     if (action === 'list') {
@@ -273,7 +276,13 @@ const plan = {
       catch (e) { usageError(`Invalid JSON: ${e.message}`); }
       await api('POST', '/api/plans', planData);
     } else if (action && isId(action, 'PLAN')) {
-      await api('GET', `/api/plans/${action}`);
+      if (flags.json === 'true') {
+        await api('GET', `/api/plans/${action}`);
+        return;
+      }
+      const planRecord = await api('GET', `/api/plans/${action}`, undefined, { silent: true });
+      const next = await api('GET', `/api/plans/${action}/next-task`, undefined, { silent: true });
+      printPlanOverview(planRecord, next);
     } else {
       usageError('Usage: pm plan <PLAN-id> | pm plan create < plan.json');
     }
@@ -282,12 +291,21 @@ const plan = {
 
 const nextTask = {
   name: 'next-task', group: 'Plans and tasks',
-  synopsis: 'next-task <plan-id>', usage: 'next-task <plan-id>',
-  summary: 'The next task in a plan whose blockers are done',
+  synopsis: 'next-task <plan-id> [--json]', usage: 'next-task <plan-id> [--json]',
+  summary: 'The next task in full, and every task in short',
+  help: 'Prints JSON: the next task (the first that has not passed and whose blockers passed) in\nfull under "next", and every task in short under "tasks", with the last progress note of each\nfinished one. pm get TASK-NNN reads another task in full.',
+  flags: ['json'],
+  flagHelp: [['--json', 'Every task in full, each with "unblocked" (as before 1.1)']],
+  examples: ['pm next-task PLAN-003'],
   async run() {
     const planId = positional[0];
     if (!planId) usageError('Usage: pm next-task <plan-id>');
-    await api('GET', `/api/plans/${planId}/next-task`);
+    if (flags.json === 'true') {
+      await api('GET', `/api/plans/${planId}/next-task`);
+      return;
+    }
+    const answer = await api('GET', `/api/plans/${planId}/next-task`, undefined, { silent: true });
+    process.stdout.write(JSON.stringify(nextTaskSummary(planId, answer), null, 2) + '\n');
   },
 };
 

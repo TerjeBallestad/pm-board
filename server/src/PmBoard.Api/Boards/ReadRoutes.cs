@@ -110,6 +110,24 @@ public static class ReadRoutes
             }
         );
 
+        // One task by its key, with the key of its plan. 0.x had no such route: a task was read
+        // through its plan, so `pm get TASK-NNN` printed the whole plan (DD-026).
+        g.MapGet(
+            "/tasks/{key}",
+            async (string slug, string key, BoardDb db) =>
+            {
+                if (await Board(db, slug) is not { } p) return NotFound();
+                var task = await db.Records.AsNoTracking()
+                    .SingleOrDefaultAsync(r => r.BoardId == p.Id && r.Kind == RecordKind.Task && r.Key == key && r.ArchivedAt == null);
+                if (task is null) return NotFound();
+                var plan = await db.Records.AsNoTracking().SingleOrDefaultAsync(r => r.Id == task.ParentId && r.ArchivedAt == null);
+                if (plan is null) return NotFound();
+                var o = (await Shape(db, [task]))[0]!.AsObject();
+                o["planId"] = plan.Key;
+                return Results.Json(o);
+            }
+        );
+
         g.MapGet(
             "/milestones",
             async (string slug, BoardDb db) =>

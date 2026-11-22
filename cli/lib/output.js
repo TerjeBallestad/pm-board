@@ -163,3 +163,83 @@ export function printSprintOverview(detail) {
   out.push('', `Drill down: pm get <id> · full JSON: pm project ${sprint.id} --json`);
   process.stdout.write(out.join('\n') + '\n');
 }
+
+// --- Plans (PLAN-003 Task 4, DD-026) ---
+// A plan read in full is often 50 to 80 KB: every task with its steps and notes. An agent works on
+// one task at a time, so pm plan and pm next-task show the plan's shape and the next task, and say
+// how to read the rest.
+
+/** The next task: the first in plan order that has not passed and whose blockers all passed. */
+export function nextOf(answer) {
+  return (answer?.tasks || []).find(t => !t.passes && t.unblocked) || null;
+}
+
+function lastNote(t) {
+  const notes = t.progressNotes || [];
+  return notes.length ? truncate(notes[notes.length - 1].text, 200) : undefined;
+}
+
+/** `pm plan <id>`: one line per task, then the next task and the commands to read more. */
+export function printPlanOverview(plan, next) {
+  const out = [];
+  const tasks = next?.tasks || plan.tasks || [];
+  const passed = tasks.filter(t => t.passes).length;
+  out.push(`${plan.id}  ${plan.title}  (${plan.stage || '?'})`);
+  const meta = [];
+  if (plan.sprintId) meta.push(`Project: ${plan.sprintId}`);
+  if (plan.sddId) meta.push(`Design: ${plan.sddId}`);
+  meta.push(`Tasks: ${passed}/${tasks.length} passed`);
+  out.push(meta.join(' · '));
+  const ctx = plan.context || {};
+  const text = (v) => (Array.isArray(v) ? v.join('\n') : String(v || ''));
+  if (text(ctx.setupNotes).trim()) out.push(`Setup notes: ${truncate(text(ctx.setupNotes), 240)} (${text(ctx.setupNotes).length} chars)`);
+  if (text(ctx.designDecisions).trim()) out.push(`Design decisions: ${truncate(text(ctx.designDecisions), 160)} (${text(ctx.designDecisions).length} chars)`);
+  if (Array.isArray(ctx.relevantFiles) && ctx.relevantFiles.length) {
+    out.push(`Relevant files: ${truncate(ctx.relevantFiles.join(', '), 160)}${ctx.relevantFiles.length > 3 ? ` (${ctx.relevantFiles.length})` : ''}`);
+  }
+
+  if (tasks.length) {
+    out.push('', 'Tasks:');
+    const idWidth = Math.max(...tasks.map(t => String(t.id).length));
+    const statusWidth = Math.max(...tasks.map(t => String(t.status || '?').length));
+    for (const t of tasks) {
+      const cols = [
+        `  ${String(t.id).padEnd(idWidth)}`,
+        String(t.status || '?').padEnd(statusWidth),
+        t.passes ? '✓' : ' ',
+        truncate(t.title, 76),
+      ];
+      if (!t.passes && t.unblocked === false && (t.blockedBy || []).length) cols.push(`⊘ blocked by ${t.blockedBy.join(', ')}`);
+      out.push(cols.join('  '));
+    }
+  }
+  const n = nextOf(next);
+  if (n) out.push('', `Next: ${n.id}  ${truncate(n.title, 76)}`);
+  else if (tasks.length && passed === tasks.length) out.push('', 'Every task passed.');
+  else if (tasks.length) out.push('', 'No task can start: each open task waits for another.');
+  if (plan.comments?.length) out.push(`Comments: ${plan.comments.length} (see --json)`);
+  out.push('', `Drill down: pm get TASK-NNN · next task in full: pm next-task ${plan.id} · full JSON: pm plan ${plan.id} --json`);
+  process.stdout.write(out.join('\n') + '\n');
+}
+
+/** `pm next-task <id>`: the next task in full, and every task in one short entry. */
+export function nextTaskSummary(planId, answer) {
+  const n = nextOf(answer);
+  return {
+    planId,
+    planTitle: answer.planTitle,
+    progress: answer.progress,
+    allComplete: answer.allComplete,
+    next: n,
+    tasks: (answer.tasks || []).map(t => {
+      const o = { id: t.id, title: t.title, status: t.status, passes: Boolean(t.passes), unblocked: t.unblocked };
+      if ((t.blockedBy || []).length) o.blockedBy = t.blockedBy;
+      if (t.passes || t.status === 'done') o.lastNote = lastNote(t);
+      return o;
+    }),
+    designDecisions: answer.designDecisions,
+    relevantFiles: answer.relevantFiles,
+    references: answer.references,
+    more: `One task in full: pm get TASK-NNN. Every task in full: pm next-task ${planId} --json`,
+  };
+}

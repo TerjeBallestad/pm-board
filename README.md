@@ -142,6 +142,8 @@ and never writes into a folder that exists.
   400 (DD-016). Prompt and review list their knowledge-base queries in `qmdQueries` for the CLI
   to run (DD-017). Each write needs a token (see Tokens).
 - `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
+- `/api/boards/{slug}/tasks/{key}`: one task as it is inside its plan, with `planId`, for
+  `pm get TASK-NNN` (DD-026). 0.x had no such route.
 - `PUT /api/boards/{slug}/tests`: every sidecar tests list of the board, `{"tests": {"DD-003":
   [...]}}`, for a repo's test catalogue tool (DD-019).
 - `POST /api/boards/{slug}/attachments?name=x.png` (the image is the body) and `GET` on the same

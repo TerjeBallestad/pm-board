@@ -481,6 +481,19 @@ const only = [
   ['update with arguments never runs npm', () => v1In(repoA, ['update', 'SB-001', '--stage', 'done']), (r) => r.code === 2 && /takes no arguments/.test(r.stderr) && !/Updating/.test(r.stdout)],
   ['a usage error exits 2', () => v1In(repoA, ['get']), (r) => r.code === 2 && /Usage: pm get <id>/.test(r.stderr)],
   ['an API error still exits 1', () => v1In(repoA, ['get', 'SB-999']), (r) => r.code === 1 && /^Error 404/.test(r.stderr)],
+  // Plans (PLAN-003 Task 4, DD-026).
+  ['pm plan --json is the whole plan, as pm get', () => {
+    const a = v1In(repoB, ['plan', 'PLAN-001', '--json', '--board', slug]);
+    const b = v1In(repoB, ['get', 'PLAN-001', '--board', slug]);
+    return { code: a.code || b.code, stdout: String(diff(parse(a.stdout).value, parse(b.stdout).value) === null), stderr: '' };
+  }, (r) => r.code === 0 && r.stdout === 'true'],
+  ['pm plan shows one line per task and the next task', () => v1In(repoB, ['plan', 'PLAN-003', '--board', slug]), (r) => r.code === 0 && /^Tasks:$/m.test(r.stdout) && /^Next: |^Every task passed\.|^No task can start/m.test(r.stdout) && !/"steps"/.test(r.stdout)],
+  ['pm get TASK-NNN reads one task with its plan', () => v1In(repoB, ['get', 'TASK-001', '--board', slug]), (r) => r.code === 0 && parse(r.stdout).value?.id === 'TASK-001' && parse(r.stdout).value?.planId === 'PLAN-001'],
+  ['pm next-task puts the next task in full under next', () => v1In(repoB, ['next-task', 'PLAN-001', '--board', slug]), (r) => {
+    const j = parse(r.stdout).value;
+    return r.code === 0 && j?.planId === 'PLAN-001' && Array.isArray(j.tasks) && (j.next === null || typeof j.next.id === 'string') && j.tasks.every((t) => !('steps' in t));
+  }],
+  ['pm next-task --json is the answer as before 1.1', () => v1In(repoB, ['next-task', 'PLAN-001', '--json', '--board', slug]), (r) => r.code === 0 && Array.isArray(parse(r.stdout).value?.tasks) && 'unblocked' in (parse(r.stdout).value?.tasks?.[0] ?? {})],
   ['a server that does not answer names its url', () => v1In(repoA, ['list'], { PM_URL: 'http://127.0.0.1:9' }), (r) => r.code === 1 && /Cannot reach the pm server at http:\/\/127.0.0.1:9/.test(r.stderr)],
 ];
 for (const [name, act, ok] of only) {
