@@ -1,0 +1,882 @@
+{
+  "terms": [
+    {
+      "id": "TERM-001",
+      "type": "term",
+      "title": "merge conflict",
+      "body": "Definition of merge conflict.",
+      "aliases": [
+        "merge conflicts"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-002",
+      "type": "term",
+      "title": "merge",
+      "body": "",
+      "aliases": [],
+      "related": [
+        "TERM-001",
+        "TERM-003"
+      ]
+    },
+    {
+      "id": "TERM-003",
+      "type": "term",
+      "title": "git-merge",
+      "body": "Definition of git-merge.",
+      "aliases": [
+        "merge",
+        "git merges"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-004",
+      "type": "term",
+      "title": "Hjemmebesøk",
+      "body": "Definition of Hjemmebesøk.",
+      "aliases": [
+        "besøk"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-005",
+      "type": "term",
+      "title": "reward",
+      "body": "   \n",
+      "aliases": [],
+      "related": [
+        "TERM-006"
+      ]
+    },
+    {
+      "id": "TERM-006",
+      "type": "term",
+      "title": "Rung",
+      "body": "Definition of Rung.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-007",
+      "type": "term",
+      "title": "C++ build",
+      "body": "Definition of C++ build.",
+      "aliases": [
+        "node.js",
+        "a|b(",
+        "pm",
+        "  Spaced  Out  "
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-008",
+      "type": "term",
+      "title": "Rung",
+      "body": "Definition of Rung.",
+      "aliases": [
+        "ladder"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-009",
+      "type": "term",
+      "title": "kelvin",
+      "body": "Definition of kelvin.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-010",
+      "type": "term",
+      "title": "session",
+      "body": "﻿",
+      "aliases": [],
+      "related": [
+        "TERM-006",
+        "TERM-404"
+      ]
+    },
+    {
+      "id": "TERM-011",
+      "type": "term",
+      "title": "nel term",
+      "body": "",
+      "aliases": [],
+      "related": [
+        "TERM-006"
+      ]
+    },
+    {
+      "id": "TERM-012",
+      "type": "term",
+      "title": "foo bar",
+      "body": "Definition of foo bar.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-013",
+      "type": "term",
+      "title": "",
+      "body": "Definition of .",
+      "aliases": [
+        "untitled alias",
+        "second alias"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-014",
+      "type": "term",
+      "title": "İstanbul",
+      "body": "Definition of İstanbul.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-015",
+      "type": "term",
+      "title": "σοφία",
+      "body": "Definition of σοφία.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-016",
+      "type": "term",
+      "title": "straße",
+      "body": "Definition of straße.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-017",
+      "type": "term",
+      "title": "🚀launch",
+      "body": "Definition of 🚀launch.",
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "TERM-018",
+      "type": "term",
+      "title": "idle",
+      "body": "Definition of idle.",
+      "aliases": [
+        42,
+        null,
+        "idling"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-019",
+      "type": "term",
+      "title": "Doorbell Event",
+      "body": "Definition of Doorbell Event.",
+      "aliases": [
+        "doorbell"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-020",
+      "type": "term",
+      "title": "dial",
+      "body": "Definition of dial.",
+      "aliases": [
+        "call"
+      ],
+      "related": []
+    },
+    {
+      "id": "TERM-021",
+      "type": "term",
+      "title": "call",
+      "body": "",
+      "aliases": [],
+      "related": [
+        "TERM-020"
+      ]
+    },
+    {
+      "id": "SB-001",
+      "type": "issue",
+      "title": "merge",
+      "body": "not a term"
+    }
+  ],
+  "cases": [
+    {
+      "text": "",
+      "expect": []
+    },
+    {
+      "text": "A merge conflict, then MERGE CONFLICTS, then a merge and a git-merge.",
+      "expect": [
+        {
+          "start": 2,
+          "end": 16,
+          "text": "merge conflict",
+          "termId": "TERM-001",
+          "title": "merge conflict",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 23,
+          "end": 38,
+          "text": "MERGE CONFLICTS",
+          "termId": "TERM-001",
+          "title": "merge conflict",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 47,
+          "end": 52,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        },
+        {
+          "start": 59,
+          "end": 68,
+          "text": "git-merge",
+          "termId": "TERM-003",
+          "title": "git-merge",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "merge  conflict over two spaces, merge\tconflict over a tab, merge\nconflict over a newline",
+      "expect": [
+        {
+          "start": 0,
+          "end": 15,
+          "text": "merge  conflict",
+          "termId": "TERM-001",
+          "title": "merge conflict",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 33,
+          "end": 47,
+          "text": "merge\tconflict",
+          "termId": "TERM-001",
+          "title": "merge conflict",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 60,
+          "end": 65,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "a re-git-merge and a git-merge-strategy, (git-merge) and git-merge's problem",
+      "expect": [
+        {
+          "start": 42,
+          "end": 51,
+          "text": "git-merge",
+          "termId": "TERM-003",
+          "title": "git-merge",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 57,
+          "end": 66,
+          "text": "git-merge",
+          "termId": "TERM-003",
+          "title": "git-merge",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "Hjemmebesøk, HJEMMEBESØK, hjemmebesøkene and besøk",
+      "expect": [
+        {
+          "start": 0,
+          "end": 11,
+          "text": "Hjemmebesøk",
+          "termId": "TERM-004",
+          "title": "Hjemmebesøk",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 13,
+          "end": 24,
+          "text": "HJEMMEBESØK",
+          "termId": "TERM-004",
+          "title": "Hjemmebesøk",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 45,
+          "end": 50,
+          "text": "besøk",
+          "termId": "TERM-004",
+          "title": "Hjemmebesøk",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "reward the Rung, climb the ladder, rung again",
+      "expect": [
+        {
+          "start": 0,
+          "end": 6,
+          "text": "reward",
+          "termId": "TERM-005",
+          "title": "reward",
+          "kind": "signpost",
+          "targets": [
+            "TERM-006"
+          ],
+          "targetTitles": [
+            "Rung"
+          ]
+        },
+        {
+          "start": 11,
+          "end": 15,
+          "text": "Rung",
+          "termId": "TERM-006",
+          "title": "Rung",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 27,
+          "end": 33,
+          "text": "ladder",
+          "termId": "TERM-008",
+          "title": "Rung",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 35,
+          "end": 39,
+          "text": "rung",
+          "termId": "TERM-006",
+          "title": "Rung",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "C++ build with node.js, nodexjs, a|b( and pm",
+      "expect": [
+        {
+          "start": 0,
+          "end": 9,
+          "text": "C++ build",
+          "termId": "TERM-007",
+          "title": "C++ build",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 15,
+          "end": 22,
+          "text": "node.js",
+          "termId": "TERM-007",
+          "title": "C++ build",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 33,
+          "end": 37,
+          "text": "a|b(",
+          "termId": "TERM-007",
+          "title": "C++ build",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "spaced out and Spaced Out",
+      "expect": [
+        {
+          "start": 0,
+          "end": 10,
+          "text": "spaced out",
+          "termId": "TERM-007",
+          "title": "C++ build",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 15,
+          "end": 25,
+          "text": "Spaced Out",
+          "termId": "TERM-007",
+          "title": "C++ build",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "kelvin, KELVIN and Kelvin",
+      "expect": [
+        {
+          "start": 0,
+          "end": 6,
+          "text": "kelvin",
+          "termId": "TERM-009",
+          "title": "kelvin",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 8,
+          "end": 14,
+          "text": "KELVIN",
+          "termId": "TERM-009",
+          "title": "kelvin",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "session and nel term",
+      "expect": [
+        {
+          "start": 0,
+          "end": 7,
+          "text": "session",
+          "termId": "TERM-010",
+          "title": "session",
+          "kind": "signpost",
+          "targets": [
+            "TERM-006",
+            "TERM-404"
+          ],
+          "targetTitles": [
+            "Rung",
+            "TERM-404"
+          ]
+        },
+        {
+          "start": 12,
+          "end": 20,
+          "text": "nel term",
+          "termId": "TERM-011",
+          "title": "nel term",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "foo bar, foo bar and foo\tbar",
+      "expect": [
+        {
+          "start": 0,
+          "end": 7,
+          "text": "foo bar",
+          "termId": "TERM-012",
+          "title": "foo bar",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 21,
+          "end": 28,
+          "text": "foo\tbar",
+          "termId": "TERM-012",
+          "title": "foo bar",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "an untitled alias and a second alias",
+      "expect": [
+        {
+          "start": 3,
+          "end": 17,
+          "text": "untitled alias",
+          "termId": "TERM-013",
+          "title": "",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 24,
+          "end": 36,
+          "text": "second alias",
+          "termId": "TERM-013",
+          "title": "",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "İstanbul, istanbul and ISTANBUL",
+      "expect": [
+        {
+          "start": 0,
+          "end": 8,
+          "text": "İstanbul",
+          "termId": "TERM-014",
+          "title": "İstanbul",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "σοφία, ΣΟΦΊΑ and σοφίας",
+      "expect": [
+        {
+          "start": 0,
+          "end": 5,
+          "text": "σοφία",
+          "termId": "TERM-015",
+          "title": "σοφία",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 7,
+          "end": 12,
+          "text": "ΣΟΦΊΑ",
+          "termId": "TERM-015",
+          "title": "σοφία",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 17,
+          "end": 22,
+          "text": "σοφία",
+          "termId": "TERM-015",
+          "title": "σοφία",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "straße, STRASSE, STRAßE",
+      "expect": [
+        {
+          "start": 0,
+          "end": 6,
+          "text": "straße",
+          "termId": "TERM-016",
+          "title": "straße",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 17,
+          "end": 23,
+          "text": "STRAßE",
+          "termId": "TERM-016",
+          "title": "straße",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "🚀launch and 🚀LAUNCH",
+      "expect": [
+        {
+          "start": 0,
+          "end": 8,
+          "text": "🚀launch",
+          "termId": "TERM-017",
+          "title": "🚀launch",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 13,
+          "end": 21,
+          "text": "🚀LAUNCH",
+          "termId": "TERM-017",
+          "title": "🚀launch",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "idle, idling, 42",
+      "expect": [
+        {
+          "start": 0,
+          "end": 4,
+          "text": "idle",
+          "termId": "TERM-018",
+          "title": "idle",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 6,
+          "end": 12,
+          "text": "idling",
+          "termId": "TERM-018",
+          "title": "idle",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "_merge, merge_, 2merge, merge2, -merge, merge-, merge.",
+      "expect": [
+        {
+          "start": 48,
+          "end": 53,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "doorbell event: the Doorbell Event, a doorbell",
+      "expect": [
+        {
+          "start": 0,
+          "end": 14,
+          "text": "doorbell event",
+          "termId": "TERM-019",
+          "title": "Doorbell Event",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 20,
+          "end": 34,
+          "text": "Doorbell Event",
+          "termId": "TERM-019",
+          "title": "Doorbell Event",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        },
+        {
+          "start": 38,
+          "end": 46,
+          "text": "doorbell",
+          "termId": "TERM-019",
+          "title": "Doorbell Event",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "ładder ladderſ ſession",
+      "expect": [
+        {
+          "start": 7,
+          "end": 13,
+          "text": "ladder",
+          "termId": "TERM-008",
+          "title": "Rung",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "a call and a dial",
+      "expect": [
+        {
+          "start": 2,
+          "end": 6,
+          "text": "call",
+          "termId": "TERM-021",
+          "title": "call",
+          "kind": "signpost",
+          "targets": [
+            "TERM-020"
+          ],
+          "targetTitles": [
+            "dial"
+          ]
+        },
+        {
+          "start": 13,
+          "end": 17,
+          "text": "dial",
+          "termId": "TERM-020",
+          "title": "dial",
+          "kind": "term",
+          "targets": [],
+          "targetTitles": []
+        }
+      ]
+    },
+    {
+      "text": "ømerge, mergeø, émerge, Ωmerge",
+      "expect": [
+        {
+          "start": 1,
+          "end": 6,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        },
+        {
+          "start": 8,
+          "end": 13,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        },
+        {
+          "start": 17,
+          "end": 22,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        },
+        {
+          "start": 25,
+          "end": 30,
+          "text": "merge",
+          "termId": "TERM-002",
+          "title": "merge",
+          "kind": "signpost",
+          "targets": [
+            "TERM-001",
+            "TERM-003"
+          ],
+          "targetTitles": [
+            "merge conflict",
+            "git-merge"
+          ]
+        }
+      ]
+    }
+  ]
+}

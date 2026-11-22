@@ -10,7 +10,7 @@ Read:
   get <id> [--brief]                One record as JSON; the terms it mentions follow
   list [<type>] [filters]           Records as "ID  title", oldest first, the newest 20
   ready [<type>] [--sprint ID]      Work that can start now: not done, not blocked, not claimed
-  glossary [--json]                 Every term on the board: one word, one meaning
+  glossary [<word>] [--json]        Every term on the board: one word, one meaning
 
 Write:
   create <type> "title" [...]       A new item (issue, decision, concern, gap, term, ...)

@@ -14,7 +14,7 @@ import {
   runKnowledgeQuery, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
 } from './runtime.js';
 import {
-  printList, fetchTerms, printGlossary, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary,
+  printList, fetchTerms, printGlossary, printTerm, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary,
   printWrite, changes, claimEnd, archived, truncate
 } from './output.js';
 import {
@@ -100,12 +100,14 @@ const ready = {
 
 const glossary = {
   name: 'glossary', group: 'Read',
-  synopsis: 'glossary [--json]', usage: 'glossary [--json]',
+  synopsis: 'glossary [<word>] [--json]', usage: 'glossary [<word>] [--json]',
   summary: 'Every term on the board: one word, one meaning',
-  help: 'Prints every term. Read it once and hold it. A word with no definition is a signpost: it\nlists the unambiguous words to use instead. pm get footnotes the terms it printed.\n\nTo add a term:      pm create term "the-word" --body "One sentence."\nTo add inflections: pm patch TERM-001 --aliases the-words,the-wording\n                    (explicit forms only, never stemming; an alias is never an ambiguous word)',
+  help: 'Prints every term. Read it once and hold it. A word with no definition is a signpost: it\nlists the unambiguous words to use instead. pm get footnotes the terms it printed.\nWith a <word>: that term, its aliases and its definition, or what to use instead.\n\nTo add a term:      pm create term "the-word" --body "One sentence."\nTo add inflections: pm patch TERM-001 --aliases the-words,the-wording\n                    (explicit forms only, never stemming; an alias is never an ambiguous word)',
   flags: ['json'],
-  flagHelp: [['--json', 'The terms as JSON']],
+  flagHelp: [['--json', 'The terms as JSON, or the one term']],
+  examples: ['pm glossary', 'pm glossary board'],
   async run() {
+    if (positional.length) return printTerm(await fetchTerms(), positional.join(' '));
     // Deliberately NOT a get-or-create shorthand like `pm issue`/`pm decision`:
     // for a curated glossary, `pm term merje` silently minting junk is a bad
     // trade. Lookup is `pm get TERM-001`; creation is `pm create term "word"`.

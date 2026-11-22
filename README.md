@@ -144,6 +144,14 @@ and never writes into a folder that exists.
 - `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
 - `/api/boards/{slug}/tasks/{key}`: one task as it is inside its plan, with `planId`, for
   `pm get TASK-NNN` (DD-026). 0.x had no such route.
+- `items`, `designs`, `plans` and `sprints` also take `sort=updatedAt` (oldest first, as pm list),
+  `limit=N` (the newest N; the header `X-Total-Count` counts the rows before the cut) and
+  `fields=id,title` (only those keys), so pm list downloads the rows it prints (DD-029). 0.x had
+  none of them; without them the answer is 0.x's.
+- `POST /api/boards/{slug}/glossary/match` `{"text": "..."}`: the terms the text mentions, the
+  first match of each, by shared/glossary.js's rules, for the footer of `pm get` (DD-029). It
+  changes nothing, so it needs no token. `node tools/compare-glossary.mjs <url> <slug>` checks it
+  against the JS on every record of a board.
 - `PUT /api/boards/{slug}/tests`: every sidecar tests list of the board, `{"tests": {"DD-003":
   [...]}}`, for a repo's test catalogue tool (DD-019).
 - `POST /api/boards/{slug}/attachments?name=x.png` (the image is the body) and `GET` on the same

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildTermIndex, findTermMatches, firstMatchPerTerm, isTerm, signpostHint } from './glossary.js';
 
@@ -151,4 +151,19 @@ test('lib/glossary.js stays browser-safe', () => {
   for (const forbidden of ['process.', 'require(', 'Buffer.', '__dirname', 'document.', 'window.']) {
     assert.ok(!src.includes(forbidden), `must not reference ${forbidden}`);
   }
+});
+
+// The server runs these rules too (server Boards/Glossary.cs, DD-029). glossary-cases.json holds
+// texts and what this module finds in them; GlossaryTests on the server reads the same file. To
+// change a case: edit its text or terms, then UPDATE_GLOSSARY_CASES=1 node --test shared/glossary.test.mjs.
+test('glossary-cases.json is what this module finds', () => {
+  const file = fileURLToPath(new URL('./glossary-cases.json', import.meta.url));
+  const fixture = JSON.parse(readFileSync(file, 'utf8'));
+  const index = buildTermIndex(fixture.terms);
+  const found = fixture.cases.map(({ text }) => ({ text, expect: findTermMatches(text, index) }));
+  if (process.env.UPDATE_GLOSSARY_CASES) {
+    writeFileSync(file, JSON.stringify({ ...fixture, cases: found }, null, 2) + '\n');
+    return;
+  }
+  assert.deepEqual(fixture.cases, found);
 });

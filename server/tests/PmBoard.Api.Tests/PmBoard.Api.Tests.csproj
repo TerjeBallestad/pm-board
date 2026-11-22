@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The JS answers of shared/glossary.js, for GlossaryTests (DD-029). -->
+    <None Include="..\..\..\shared\glossary-cases.json" Link="glossary-cases.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\PmBoard.Api\PmBoard.Api.csproj" />
   </ItemGroup>
 </Project>

@@ -21,6 +21,7 @@ public class AuthTests(BoardFactory factory) : IClassFixture<BoardFactory>
         "/api/boards/{slug}/sprints/{key}/explore",
         "/api/boards/{slug}/context/prompt",
         "/api/boards/{slug}/context/review",
+        "/api/boards/{slug}/glossary/match", // DD-029
     ];
 
     private async Task<string> Board()
@@ -129,6 +130,7 @@ public class AuthTests(BoardFactory factory) : IClassFixture<BoardFactory>
             var real = path.Replace("{slug}", slug).Replace("{key}", "SPRINT-001");
             object body = path.EndsWith("prompt") ? new { entityType = "item", entityId = "SB-001" }
                 : path.EndsWith("review") ? new { entityType = "sdd", entityId = "SDD-001" }
+                : path.EndsWith("match") ? new { text = "Any text" }
                 : new { };
             var (status, answer) = await Send(HttpMethod.Post, real, body, null);
             Assert.True(status == HttpStatusCode.OK, $"{path}: {(int)status} {answer}");

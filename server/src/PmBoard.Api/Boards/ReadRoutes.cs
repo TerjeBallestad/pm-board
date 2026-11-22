@@ -29,8 +29,10 @@ public static class ReadRoutes
 
         g.MapGet(
             "/items",
-            async (string slug, BoardDb db, string? type, string? stage, string? priority, string? sprintId, string? frontier, string? allClaims) =>
+            async (string slug, BoardDb db, HttpResponse res, string? type, string? stage, string? priority, string? sprintId, string? frontier, string? allClaims, string? sort, string? limit, string? fields) =>
             {
+                var lq = ListQuery.Parse(sort, limit, fields);
+                if (lq.Refusal is { } refused) return refused;
                 if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Item);
                 if (type is not null) q = q.Where(r => r.Type == type);
@@ -42,7 +44,7 @@ public static class ReadRoutes
                 {
                     items = Frontier(p, items, await Live(db, p, RecordKind.Item).ToListAsync(), allClaims == "true");
                 }
-                return Results.Json(await Shape(db, items));
+                return await lq.Answer(db, res, items);
             }
         );
 
@@ -61,34 +63,41 @@ public static class ReadRoutes
 
         g.MapGet(
             "/designs",
-            async (string slug, BoardDb db, string? sprintId) =>
+            async (string slug, BoardDb db, HttpResponse res, string? sprintId, string? sort, string? limit, string? fields) =>
             {
+                var lq = ListQuery.Parse(sort, limit, fields);
+                if (lq.Refusal is { } refused) return refused;
                 if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Design);
                 if (sprintId is not null) q = q.Where(r => r.SprintKey == sprintId);
-                return Results.Json(await Shape(db, await q.OrderBy(r => r.Key).ToListAsync()));
+                return await lq.Answer(db, res, await q.OrderBy(r => r.Key).ToListAsync());
             }
         );
         g.MapGet("/designs/{key}", (string slug, string key, BoardDb db) => One(db, slug, RecordKind.Design, key));
 
         g.MapGet(
             "/plans",
-            async (string slug, BoardDb db, string? sprintId) =>
+            async (string slug, BoardDb db, HttpResponse res, string? sprintId, string? sort, string? limit, string? fields) =>
             {
+                var lq = ListQuery.Parse(sort, limit, fields);
+                if (lq.Refusal is { } refused) return refused;
                 if (await Board(db, slug) is not { } p) return NotFound();
                 var q = Live(db, p, RecordKind.Plan);
                 if (sprintId is not null) q = q.Where(r => r.SprintKey == sprintId);
-                return Results.Json(await Shape(db, await q.OrderBy(r => r.Key).ToListAsync()));
+                return await lq.Answer(db, res, await q.OrderBy(r => r.Key).ToListAsync());
             }
         );
         g.MapGet("/plans/{key}", (string slug, string key, BoardDb db) => One(db, slug, RecordKind.Plan, key));
 
         g.MapGet(
             "/sprints",
-            async (string slug, BoardDb db) =>
-                await Board(db, slug) is { } p
-                    ? Results.Json(await Shape(db, await Live(db, p, RecordKind.Sprint).OrderBy(r => r.Key).ToListAsync()))
-                    : NotFound()
+            async (string slug, BoardDb db, HttpResponse res, string? sort, string? limit, string? fields) =>
+            {
+                var lq = ListQuery.Parse(sort, limit, fields);
+                if (lq.Refusal is { } refused) return refused;
+                if (await Board(db, slug) is not { } p) return NotFound();
+                return await lq.Answer(db, res, await Live(db, p, RecordKind.Sprint).OrderBy(r => r.Key).ToListAsync());
+            }
         );
         g.MapGet(
             "/sprints/{key}",
@@ -136,6 +145,8 @@ public static class ReadRoutes
                     : NotFound()
         );
         g.MapGet("/milestones/{key}", (string slug, string key, BoardDb db) => One(db, slug, RecordKind.Milestone, key));
+
+        g.MapGlossaryRoutes();
     }
 
     internal static IResult NotFound() => Results.Json(new { error = "Not found" }, statusCode: 404);

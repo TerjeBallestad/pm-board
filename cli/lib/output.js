@@ -1,6 +1,7 @@
 // What pm prints for lists, the glossary and a project's overview.
 import { buildTermIndex, findTermMatches, firstMatchPerTerm, describeConflict, signpostHint } from './glossary.js';
-import { api, flags, state } from './runtime.js';
+import { closest } from './help.js';
+import { api, httpJson, boardPath, BASE_URL, flags, state } from './runtime.js';
 
 // --- List formatter ---
 // Terse "ID  title" output sorted oldest→newest so the most recent items
@@ -8,7 +9,18 @@ import { api, flags, state } from './runtime.js';
 // --json prints raw unsorted JSON (back-compat for scripts).
 // Default limit 20; --limit N or --all override.
 const LIST_DEFAULT_LIMIT = 20;
-export function printList(items) {
+// The fields printList reads: the server sends only these when it cuts (DD-029).
+export const LIST_FIELDS = ['id', 'title', 'name', 'createdAt', 'updatedAt'];
+
+/** How many rows pm list prints: the newest N, or null for every row (--all, --json, --limit 0). */
+export function listLimit() {
+  if (flags.json === 'true' || flags.all === 'true') return null;
+  const limit = flags.limit ? parseInt(flags.limit, 10) : LIST_DEFAULT_LIMIT;
+  return Number.isFinite(limit) && limit > 0 ? limit : null;
+}
+
+/** { items, total }: total counts the rows before the server cut them, when it did. */
+export function printList({ items, total }) {
   if (flags.json === 'true') {
     process.stdout.write(JSON.stringify(items, null, 2) + '\n');
     return;
@@ -23,14 +35,9 @@ export function printList(items) {
     const bv = sortKey(b);
     return av < bv ? -1 : av > bv ? 1 : 0;
   });
-  const all = flags.all === 'true';
-  const limit = flags.limit ? parseInt(flags.limit, 10) : LIST_DEFAULT_LIMIT;
-  let display = sorted;
-  let hidden = 0;
-  if (!all && Number.isFinite(limit) && limit > 0 && sorted.length > limit) {
-    hidden = sorted.length - limit;
-    display = sorted.slice(-limit);
-  }
+  const limit = listLimit();
+  const display = limit && sorted.length > limit ? sorted.slice(-limit) : sorted;
+  const hidden = (total ?? sorted.length) - display.length;
   if (hidden > 0) {
     process.stdout.write(`… ${hidden} older hidden (use --all or --limit N)\n`);
   }
@@ -78,23 +85,64 @@ export function printGlossary(terms) {
   }
 }
 
+// `pm glossary <word>`: one term, found by its title, an alias or its id. Case and runs of
+// whitespace do not count, as in glossary.js. A miss names the closest term (DD-029).
+const surfaceKey = (s) => String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+export function printTerm(terms, word) {
+  const index = buildTermIndex(terms);
+  const key = surfaceKey(word);
+  const surfacesOf = (t) => [t.title, ...(Array.isArray(t.aliases) ? t.aliases : [])].filter(s => typeof s === 'string' && s.trim());
+  // glossary.js drops a surface that is too short or taken; such a word still finds its term here.
+  const id = index.bySurface.get(key)
+    ?? terms.find(t => String(t.id).toLowerCase() === key)?.id
+    ?? terms.find(t => surfacesOf(t).some(s => surfaceKey(s) === key))?.id;
+  const term = id && terms.find(t => t.id === id);
+  if (!term) {
+    const owner = new Map();
+    for (const t of terms) for (const s of surfacesOf(t)) if (!owner.has(s)) owner.set(s, t);
+    const near = closest(key, [...owner.keys()])
+      ?? [...owner.keys()].filter(s => surfaceKey(s).includes(key)).sort((a, b) => a.length - b.length)[0];
+    const hint = near ? ` Did you mean: ${owner.get(near).title} (${owner.get(near).id})?` : '';
+    process.stderr.write(`No term "${String(word).trim()}".${hint}\nEvery term: pm glossary\n`);
+    process.exit(1);
+  }
+  if (flags.json === 'true') {
+    process.stdout.write(JSON.stringify(term, null, 2) + '\n');
+    return;
+  }
+  const meta = index.terms.get(term.id);
+  const out = [`${term.id}  ${meta.title}`];
+  const aliases = surfacesOf(term).slice(term.title ? 1 : 0);
+  if (aliases.length) out.push(`Aliases: ${aliases.join(', ')}`);
+  if (meta.kind === 'signpost') out.push(`⚠ ${signpostHint(meta.targetTitles)} (${meta.targets.join(', ')})`);
+  else out.push(String(term.body || '').trim() || '(undefined)');
+  process.stdout.write(out.join('\n') + '\n');
+}
+
 // Terms mentioned in what `pm get` just printed. Written to stderr so stdout
 // stays pure JSON — agents pipe `pm get X | jq` and still see the footer.
 export async function printGlossaryFooter(entity) {
   if (!entity || typeof entity !== 'object') return;
-  const terms = await fetchTerms().catch(() => []);
-  if (terms.length === 0) return;
   const scanned = [
     entity.title || entity.name || '',
     entity.body || entity.description || '',
     ...(Array.isArray(entity.comments) ? entity.comments.map(c => c?.text || '') : [])
   ].join('\n');
-  const index = buildTermIndex(terms);
-  const mentioned = firstMatchPerTerm(findTermMatches(scanned, index));
+  const mentioned = await termsMentioned(scanned);
   if (mentioned.length === 0) return;
   const parts = mentioned.map(m =>
     `${m.termId} ${m.title}${m.kind === 'signpost' ? ` (${signpostHint(m.targetTitles)})` : ''}`);
   process.stderr.write(`\nGlossary: ${parts.join(' · ')}\n`);
+}
+
+// The server finds the terms with glossary.js's rules (DD-029), so pm get downloads the few the
+// record mentions, not every term. A server without the route: every term, matched here.
+async function termsMentioned(text) {
+  const r = await httpJson('POST', `${BASE_URL}${boardPath('/api/glossary/match')}`, { text }).catch(() => null);
+  if (r?.status === 200 && Array.isArray(r.data)) return r.data;
+  const terms = await fetchTerms().catch(() => []);
+  if (terms.length === 0) return [];
+  return firstMatchPerTerm(findTermMatches(text, buildTermIndex(terms)));
 }
 
 // --- Sprint/project overview formatter ---

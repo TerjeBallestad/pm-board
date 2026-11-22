@@ -86,9 +86,14 @@ export function boardPath(path) {
 
 // --- Request helper (HTTP to the server, with the token on every write) ---
 export async function api(method, path, body, { silent = false } = {}) {
-  let status, data;
+  return (await apiResponse(method, path, body, { silent })).data;
+}
+
+/** api(), with the answer's headers too (lowercase names). */
+export async function apiResponse(method, path, body, { silent = false } = {}) {
+  let status, data, headers;
   try {
-    ({ status, data } = await httpJson(method, `${BASE_URL}${boardPath(path)}`, body));
+    ({ status, data, headers } = await httpJson(method, `${BASE_URL}${boardPath(path)}`, body));
   } catch (err) {
     process.stderr.write(`Failed: ${err.message}\nCannot reach the pm server at ${BASE_URL} (set PM_URL or "url" in ${USER_CONFIG_PATH}).\n`);
     process.exit(1);
@@ -101,7 +106,7 @@ export async function api(method, path, body, { silent = false } = {}) {
     process.exit(1);
   }
   if (!silent && data !== undefined) process.stdout.write(JSON.stringify(data, null, 2) + '\n');
-  return data;
+  return { data, headers };
 }
 
 export function httpJson(method, url, body) {
@@ -130,7 +135,7 @@ export function httpJson(method, url, body) {
           try { data = JSON.parse(raw); }
           catch { data = raw; }
         }
-        resolveRequest({ status: res.statusCode || 0, data });
+        resolveRequest({ status: res.statusCode || 0, data, headers: res.headers });
       });
     });
     req.on('error', rejectRequest);

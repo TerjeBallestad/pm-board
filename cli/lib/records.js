@@ -1,6 +1,7 @@
 // Record types, the routes for an id, and the request bodies that flags make.
 import { readFileSync } from 'fs';
-import { api, flags, state, isRequestFlag, usageError } from './runtime.js';
+import { api, apiResponse, flags, state, isRequestFlag, usageError } from './runtime.js';
+import { listLimit, LIST_FIELDS } from './output.js';
 
 // --- List type resolution ---
 // Canonical list types: 'sdd', 'plan', 'sprint', plus per-config item types
@@ -65,24 +66,38 @@ export function resolveListType(input) {
   }
   return { canonical };
 }
+// What pm list prints: { items, total }. When it prints the newest N, the server sorts and cuts
+// (DD-029) and sends only the fields printList reads; total is the number of rows before the cut
+// (X-Total-Count). A server without that query answers every row, and printList cuts them itself.
 export async function fetchListByType(typeArg) {
   const { canonical } = resolveListType(typeArg);
-  if (canonical === 'sdd') return api('GET', '/api/designs', undefined, { silent: true });
-  if (canonical === 'plan') {
-    const path = flags.sprint ? `/api/plans?sprintId=${encodeURIComponent(flags.sprint)}` : '/api/plans';
-    return api('GET', path, undefined, { silent: true });
-  }
-  if (canonical === 'sprint') return api('GET', '/api/sprints', undefined, { silent: true });
-  // Items: filter by canonical type label if specified
   const params = new URLSearchParams();
-  if (canonical) params.set('type', canonical);
-  if (flags.stage) params.set('stage', flags.stage);
-  if (flags.priority) params.set('priority', flags.priority);
-  if (flags.sprint) params.set('sprintId', flags.sprint);
-  if (flags.frontier === 'true') params.set('frontier', 'true');
-  if (flags['all-claims'] === 'true') params.set('allClaims', 'true');
+  let path;
+  if (canonical === 'sdd') path = '/api/designs';
+  else if (canonical === 'plan') {
+    path = '/api/plans';
+    if (flags.sprint) params.set('sprintId', flags.sprint);
+  } else if (canonical === 'sprint') path = '/api/sprints';
+  else {
+    // Items: filter by canonical type label if specified
+    path = '/api/items';
+    if (canonical) params.set('type', canonical);
+    if (flags.stage) params.set('stage', flags.stage);
+    if (flags.priority) params.set('priority', flags.priority);
+    if (flags.sprint) params.set('sprintId', flags.sprint);
+    if (flags.frontier === 'true') params.set('frontier', 'true');
+    if (flags['all-claims'] === 'true') params.set('allClaims', 'true');
+  }
+  const limit = listLimit();
+  if (limit) {
+    params.set('sort', 'updatedAt');
+    params.set('limit', String(limit));
+    params.set('fields', LIST_FIELDS.join(','));
+  }
   const qs = params.toString();
-  return api('GET', `/api/items${qs ? '?' + qs : ''}`, undefined, { silent: true });
+  const { data, headers } = await apiResponse('GET', `${path}${qs ? '?' + qs : ''}`, undefined, { silent: true });
+  const total = limit && headers?.['x-total-count'] !== undefined ? Number(headers['x-total-count']) : undefined;
+  return { items: data, total: Number.isInteger(total) ? total : undefined };
 }
 
 // --- ID prefix routing ---

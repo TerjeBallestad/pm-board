@@ -518,6 +518,28 @@ const only = [
   }, (r) => r.code === 0 && r.stdout === 'created SB-002 (issue): Receipt check\n|Receipt check, JSON'],
   ['a claim says until when', () => v1In(repoB, ['claim', 'SB-002', '--as', 'agent-z']), (r) => r.code === 0 && /^claimed SB-002 for agent-z until \d{4}-\d\d-\d\dT/.test(r.stdout)],
   ['a patch names each field as the server has it', () => v1In(repoB, ['patch', 'SB-002', '--stage', 'exploring', '--related', 'SB-001', '--body', 'twelve chars']), (r) => r.code === 0 && r.stdout === 'updated SB-002: stage exploring, related SB-001, body (12 chars)\n'],
+  // The server sorts, cuts and finds terms (PLAN-003 Task 6, DD-029).
+  ['pm list --limit 2 prints the newest 2 rows of pm list --json, and counts the rest', () => {
+    const all = parse(v1In(repoB, ['list', '--json', '--board', slug]).stdout).value ?? [];
+    const key = (it) => it.updatedAt || it.createdAt || '';
+    const newest = [...all].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)).slice(-2);
+    const width = Math.max(...newest.map((it) => it.id.length));
+    const want = `… ${all.length - 2} older hidden (use --all or --limit N)\n` + newest.map((it) => `${it.id.padEnd(width)}  ${it.title}\n`).join('');
+    const r = v1In(repoB, ['list', '--limit', '2', '--board', slug]);
+    return { ...r, stdout: String(all.length > 2 && r.stdout === want) };
+  }, (r) => r.code === 0 && r.stdout === 'true'],
+  ['pm glossary <word> prints one term, by an alias in any case', () => v1In(repoB, ['glossary', 'SESSIONS', '--board', slug]), (r) => r.code === 0 && r.stdout === 'TERM-001  Session\nAliases: sessions\nThe time a user stays logged in.\n'],
+  ['pm glossary <id> prints that term', () => v1In(repoB, ['glossary', 'term-002', '--board', slug]), (r) => r.code === 0 && r.stdout === 'TERM-002  Board\nAliases: boards\nOne repo\'s whole board.\n'],
+  ['pm glossary <signpost> says what to use instead, and pm get footnotes it', () => {
+    const made = v1In(repoB, ['create', 'term', 'login time', '--board', slug]);
+    const id = made.stdout.match(/^created (TERM-\d+)/)?.[1];
+    v1In(repoB, ['patch', id, '--related', 'TERM-001', '--board', slug]);
+    const a = v1In(repoB, ['glossary', 'Login  Time', '--board', slug]);
+    const b = v1In(repoB, ['get', id, '--board', slug]);
+    return { code: a.code || b.code, stdout: a.stdout.replace(id, '<id>') + b.stderr.replace(id, '<id>'), stderr: '' };
+  }, (r) => r.code === 0 && r.stdout === '<id>  login time\n⚠ use Session instead (TERM-001)\n\nGlossary: <id> login time (use Session instead)\n'],
+  ['pm glossary <miss> names the closest term and exits 1', () => v1In(repoB, ['glossary', 'sesion', '--board', slug]), (r) => r.code === 1 && r.stdout === '' && r.stderr === 'No term "sesion". Did you mean: Session (TERM-001)?\nEvery term: pm glossary\n'],
+  ['pm glossary <word> --json is the term\'s record', () => v1In(repoB, ['glossary', 'board', '--json', '--board', slug]), (r) => r.code === 0 && parse(r.stdout).value?.id === 'TERM-002' && parse(r.stdout).value?.body === 'One repo\'s whole board.'],
   ['a server that does not answer names its url', () => v1In(repoA, ['list'], { PM_URL: 'http://127.0.0.1:9' }), (r) => r.code === 1 && /Cannot reach the pm server at http:\/\/127.0.0.1:9/.test(r.stderr)],
 ];
 for (const [name, act, ok] of only) {
