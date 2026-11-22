@@ -92,7 +92,8 @@ Several sessions may work on PLAN-001 at once (the plan says which tasks can).
   If it is already in progress, pick another. Log progress the same way, with evidence (commit,
   test counts, what you broke to see a test fail). Close with `pm task-done`.
 - Work in a worktree: `git worktree add .claude/worktrees/<task> -b <task>`. `pm` works there too
-  (the untracked pm.config.json at the repo root points at the board in pm-board-cli).
+  (`.pm.json` at the repo root names the board, pm-board-cli, on pm.godstemning.dev; pm 1.x finds it
+  from any worktree, and writes need the machine's token in ~/.config/pm/config.json).
 - Rebase on `main`, run the checks, push to `main`. Never force-push `main`. Two sessions that both
   add an EF migration: the second rebases, removes its migration with `--force`, and adds it again.
 - Decisions go on the board as DDs: `pm create decision "<one-sentence decision>" --sprint SPRINT-001 --body "..."`.
