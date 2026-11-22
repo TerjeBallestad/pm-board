@@ -1,6 +1,6 @@
 {
   "name": "@terjeballestad/pm-board-cli",
-  "version": "1.0.0-rc.0",
+  "version": "1.0.0",
   "description": "pm 1.x: the pm commands of 0.x, against one server that holds every repo's board",
   "bin": {
     "pm": "bin/pm"
