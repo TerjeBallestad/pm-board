@@ -1,7 +1,8 @@
 # pm 1.x
 
-The `pm` command for a pm board server. It has the same commands and prints the same output as
-pm 0.x, so skills and prompts work unchanged. The board lives on one server, which gives out every
+The `pm` command for a pm board server. It has the commands of pm 0.x, and since 1.1 it prints
+less: reads print overviews, writes print one line, and `--json` gives the full answer as before
+(DD-024 to DD-027). The board lives on one server, which gives out every
 id, so two agents in two worktrees can never both make `SB-042`.
 
 The 0.x line, with files in each repo, is `@terjeballestad/pm-board-cli@0`.

@@ -1,7 +1,7 @@
 # pm board
 
-`pm` 1.x: one server that holds every repo's board. Agents and people use the same `pm`
-commands as in 0.x, and the server is the only place that gives out ids, so two agents in two
+`pm` 1.x: one server that holds every repo's board. Agents and people use the `pm`
+commands of 0.x, leaner since 1.1 (`pm help`), and the server is the only place that gives out ids, so two agents in two
 worktrees can never both make `SB-042`.
 
 The 0.x line, the local-first edition with files in each repo, lives in
@@ -102,7 +102,8 @@ stdout and stderr with its file in `tools/fixtures/cli-expected/`. Each file is 
 command (`list_--frontier.2.txt` is the second `pm list --frontier`), so a failure prints a diff
 that names the command. The files mask what changes from run to run: a time or comment id made
 during the run, the slug, the server URL, the temp folder, the CLI's version and Node's JSON.parse
-message. JSON stdout is stored with sorted keys. It needs no 0.x. CI runs both modes.
+message. JSON stdout is stored with sorted keys. It needs no 0.x. CI runs `--expected`; the comparison
+with 0.x left CI with pm 1.1, whose help and exit codes differ from 0.x on purpose (DD-025).
 
 A change of output needs a DD that says why. Make the change, run `--update`, read
 `git diff tools/fixtures/cli-expected`, and commit the files with the code.

@@ -120,7 +120,7 @@ const create = {
   synopsis: 'create <type> "title" [...]',
   usage: 'create <type> "title" [--priority P] [--body B] [--pillar P] [--sprint ID] [--files f1,f2] [--blockedBy IDs]',
   summary: 'A new item (issue, decision, concern, gap, term, ...)',
-  help: () => `Creates an item and prints it as JSON with its new key. <type> is an item type\n(${itemTypeWords()}). Projects, designs and plans have their own commands:\npm project create, pm sdd create, pm plan create.`,
+  help: () => `Creates an item and prints one line with its new key. <type> is an item type\n(${itemTypeWords()}). Projects, designs and plans have their own commands:\npm project create, pm sdd create, pm plan create.`,
   flags: ['priority', 'body', 'pillar', 'sprint', 'files', 'blockedBy'],
   flagHelp: [
     ['--priority P', 'low, medium, high or critical'],

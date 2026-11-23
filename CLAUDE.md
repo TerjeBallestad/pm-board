@@ -1,8 +1,9 @@
 # pm board (pm 1.x)
 
-One ASP.NET Core server that holds every repo's board, a React dashboard, and (coming) a thin `pm`
-CLI. The work is planned on the pm board: **PLAN-001** in project SPRINT-001. Read the plan's
-setup notes before you start: `pm plan PLAN-001`. Decisions are DD-001 to DD-015: `pm get DD-0NN`.
+One ASP.NET Core server that holds every repo's board, a React dashboard, and the `pm` CLI.
+The work is planned on the pm board: **PLAN-001** in project SPRINT-001. Read the plan's setup
+notes in full before you start: `pm get PLAN-001` (`pm plan PLAN-001` is the overview, with notes
+in short). Decisions are DD-001 to DD-015: `pm get DD-0NN`.
 
 Two words, one meaning each (DD-015, `pm glossary`): a **board** is one repo's whole board, at
 `/<slug>` and `/api/boards/{slug}`. A **project** is a SPRINT-NNN record inside a board, as in 0.x.
@@ -13,7 +14,8 @@ Never use "project" for a board.
 pm-board-cli (~/dev/pm-board-cli, the 0.x line) defines what 1.x must do. `lib/dispatch.js`
 ROUTE_TABLE lists every route, `api/*.js` holds each handler, `dashboard/app.js` holds the
 dashboard's logic. Read the 0.x code before you build its 1.x side, and match it. Change a 0.x
-behaviour only with a DD that says why.
+behaviour only with a DD that says why. The CLI's output is the exception: since pm 1.1 its
+contract is tools/fixtures/cli-expected (DD-024).
 
 ## Layout
 
@@ -21,7 +23,8 @@ behaviour only with a DD that says why.
 server/   PmBoard.slnx: src/PmBoard.Api (minimal API, EF Core, Npgsql), tests/PmBoard.Api.Tests
           docs/data-model.md: the schema and the mapping from 0.x. Keep it current.
 client/   Vite + React + TS dashboard on @terjeballestad/bob; e2e/ holds the Playwright tests
-cli/      the 1.x `pm` command (bin/pm: 0.x's bin/pm over HTTP, DD-021); lib/ holds copies of shared/
+cli/      the 1.x `pm` command (DD-021): lib/commands.js is the command table (DD-025); lib/ holds
+          copies of shared/
 shared/   glossary.js: 0.x's glossary module, unchanged, plain ESM (its test enforces that)
 shared/   also knowledge-base.js: the CLI appends knowledge-base results to prompts with it (DD-017)
 tools/    export-v0.mjs, compare-read.mjs, compare-write.mjs, compare-cli.mjs, compare-export.mjs, v0-board.mjs: read 0.x
