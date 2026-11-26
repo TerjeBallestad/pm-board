@@ -201,7 +201,9 @@ const steps = [
   ['ready'],
   ['show', 'SB-001', '--brief'],
   ['init'],
-  ['update', 'SB-001'],
+  // 0.x's pm update ignores its arguments and runs npm install -g of 0.x, which replaces this
+  // machine's pm. Only 1.x runs it (1.x refuses the arguments).
+  { argv: ['update', 'SB-001'], v1Only: true },
   ['serve'],
   { argv: ['list'], cwd: 'sub/deeper' },
   // items
@@ -420,6 +422,10 @@ if (expectedMode) {
   console.log(`${slug}: 0.x ${v0Version} bin/pm against 1.x cli/bin/pm on ${v1Board.base}`);
   for (const s of steps) {
     const step = Array.isArray(s) ? { argv: s } : s;
+    if (step.v1Only) {
+      console.log(`skip  pm ${step.argv.join(' ')}: 1.x only`);
+      continue;
+    }
     const a = run(0, step.argv, step);
     const b = run(1, step.argv, step);
     const label = `pm ${step.argv.join(' ')}${step.cwd ? ` (in ${step.cwd})` : ''}`;
