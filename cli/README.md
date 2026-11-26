@@ -47,7 +47,8 @@ A body write never loses text (DD-030, since pm 1.2). Several agents write the s
 - To add a block, let the server do it: `pm patch SB-042 --prepend-body @block.md` puts it at the
   top, `--append-body` at the end, one blank line from the body. No read comes first, so no read
   can be stale. A superseding block (a correction that retires text below it) is a prepend.
-- To replace the body, name the body you replace. `pm get SB-042` prints `bodyHash`. Then
+- To replace the body, name the body you replace. `pm get SB-042` prints `bodyHash`, as does
+  every read of one record (`pm issue SB-042`, `pm sdd <id>`, `pm project <id>`). Then
   `pm patch SB-042 --body @new.md --base <bodyHash>`. If someone changed the body since your
   read, the server refuses, pm prints the current hash on stderr and exits 3. Read it again and
   redo your change.
@@ -58,3 +59,6 @@ A body write never loses text (DD-030, since pm 1.2). Several agents write the s
 `pm sdd <id>` and `pm project <id>` take the same flags. `--body`, `--prepend-body` and
 `--append-body` each read `@file` or `-` (stdin). Exit codes: 0 done, 1 error, 2 usage, 3 a body
 write refused.
+
+pm reads a value that starts with `--` as the next flag, so `--prepend-body "--- Superseded"`
+stops with "needs a value". Put such a block in a file: `--prepend-body @block.md`.

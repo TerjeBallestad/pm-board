@@ -13,6 +13,7 @@ A body write never loses text (DD-030). Items, designs and projects:
   --base HASH           The bodyHash from pm get: the body you replace. If the body
                         changed since, nothing is written and pm exits 3
   --force               Replace the body with no check
+  A value that starts with -- is read as a flag: put such a block in a file (@block.md).
 
 Items (SB, DD, DC, GAP, ...):
   --title T            Rename

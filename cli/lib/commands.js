@@ -147,6 +147,12 @@ const create = {
   },
 };
 
+/** One record as JSON, with bodyHash when it has a body, as pm get prints it (DD-030). */
+async function printRecord(path) {
+  const record = await api('GET', path, undefined, { silent: true });
+  process.stdout.write(JSON.stringify(withBodyHash(record), null, 2) + '\n');
+}
+
 /** Create an item and print its receipt (DD-027). */
 async function createItem(body) {
   const item = await api('POST', '/api/items', body, { silent: true });
@@ -169,6 +175,7 @@ A body write never loses text (DD-030). Items, designs and projects:
   --base HASH           The bodyHash from pm get: the body you replace. If the body
                         changed since, nothing is written and pm exits 3
   --force               Replace the body with no check
+  A value that starts with -- is read as a flag: put such a block in a file (@block.md).
 
 Items (SB, DD, DC, GAP, ...):
   --title T            Rename
@@ -423,7 +430,7 @@ const project = {
     ['--body B', 'The project doc (@file.md, or -)'],
     ['--prepend-body B', 'Add a block at the top of the doc (with an id)'],
     ['--append-body B', 'Add a block at the end of the doc (with an id)'],
-    ['--base HASH', 'With --body on a doc with text: its bodyHash from pm get'],
+    ['--base HASH', 'With --body on a doc with text: its bodyHash (pm project <id> prints it)'],
     ['--force', 'With --body: replace the doc with no check'],
     ['--name N', 'Rename (with an id)'],
     ['--status S', 'active or completed (with an id)'],
@@ -473,7 +480,7 @@ const project = {
       sprintId = active.id;
     }
     const detail = await api('GET', `/api/sprints/${sprintId}`, undefined, { silent: true });
-    if (flags.json === 'true') process.stdout.write(JSON.stringify(detail, null, 2) + '\n');
+    if (flags.json === 'true') process.stdout.write(JSON.stringify(withBodyHash(detail), null, 2) + '\n');
     else printSprintOverview(detail);
   },
 };
@@ -494,7 +501,7 @@ const sdd = {
     ['--body B', 'The design doc (@file.md, or -)'],
     ['--prepend-body B', 'Add a block at the top of the doc (with an id)'],
     ['--append-body B', 'Add a block at the end of the doc (with an id)'],
-    ['--base HASH', 'With --body on a doc with text: its bodyHash from pm get'],
+    ['--base HASH', 'With --body on a doc with text: its bodyHash (pm sdd <id> prints it)'],
     ['--force', 'With --body: replace the doc with no check'],
     ['--items IDs', 'Linked items'],
     ['--sprint SPRINT-NNN', 'Put it in that project'],
@@ -519,7 +526,7 @@ const sdd = {
         await resolveBody();
         await patchRecord(`/api/designs/${action}`, action, buildPatchBody());
       } else {
-        await api('GET', `/api/designs/${action}`);
+        await printRecord(`/api/designs/${action}`);
       }
     } else if (action) {
       rejectCommandWordTitle(action, 'sdd');
@@ -562,7 +569,7 @@ const shorthand = (name) => ({
         await resolveBody();
         await patchRecord(routeById(arg), arg, buildPatchBody());
       } else {
-        await api('GET', routeById(arg));
+        await printRecord(routeById(arg));
       }
     } else {
       rejectCommandWordTitle(arg, name);

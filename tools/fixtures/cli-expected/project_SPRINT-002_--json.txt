@@ -3,6 +3,7 @@ exit 0
 --- stdout (JSON, keys sorted)
 {
   "body": "The project doc",
+  "bodyHash": "bc94c406ad54",
   "comments": [],
   "completedAt": "<new time>",
   "createdAt": "<new time>",

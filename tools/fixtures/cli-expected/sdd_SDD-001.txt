@@ -3,6 +3,7 @@ exit 0
 --- stdout (JSON, keys sorted)
 {
   "body": "How login works.",
+  "bodyHash": "6530722bb04d",
   "comments": [],
   "createdAt": "2026-01-01T10:00:00.000Z",
   "id": "SDD-001",

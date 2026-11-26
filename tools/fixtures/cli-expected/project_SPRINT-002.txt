@@ -3,7 +3,7 @@ exit 0
 --- stdout
 SPRINT-002  CLI project  (completed)
 Destination: Somewhere else
-Project doc: 15 chars (see --json)
+Project doc: 15 chars, bodyHash bc94c406ad54 (see --json)
 
 Drill down: pm get <id> · full JSON: pm project SPRINT-002 --json
 --- stderr

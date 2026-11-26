@@ -150,7 +150,8 @@ export async function expandFileArg(val, label = 'input') {
 // --- Body resolution (inline string, @file, or - for stdin) ---
 // --prepend-body and --append-body read a file or stdin the same way.
 export async function resolveBody() {
-  if (flags.body && (flags['prepend-body'] || flags['append-body'])) {
+  // Presence, not truth: --body '' is a body too, and still goes with neither block flag.
+  if (flags.body !== undefined && (flags['prepend-body'] !== undefined || flags['append-body'] !== undefined)) {
     usageError('--body replaces the whole body; --prepend-body and --append-body add a block to it. Use one or the other.');
   }
   for (const key of ['body', 'prepend-body', 'append-body']) {
@@ -183,7 +184,11 @@ export function bodyField(key, val) {
     return ['force', true];
   }
   if (key in BODY_FIELDS) {
-    if (val === 'true' || val === '') usageError(`--${key} needs a value`);
+    if (val === 'true' || val === '') {
+      // The parser reads a value that starts with -- as the next flag (DD-023), so such a block goes in a file.
+      const hint = key === 'base' ? '' : `. A value that starts with -- goes in a file: --${key} @block.md`;
+      usageError(`--${key} needs a value${hint}`);
+    }
     return [BODY_FIELDS[key], val];
   }
   return null;

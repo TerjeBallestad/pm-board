@@ -2,6 +2,7 @@
 import { buildTermIndex, findTermMatches, firstMatchPerTerm, describeConflict, signpostHint } from './glossary.js';
 import { closest } from './help.js';
 import { api, httpJson, boardPath, BASE_URL, flags, state } from './runtime.js';
+import { bodyHash, withBodyHash } from './records.js';
 
 // --- List formatter ---
 // Terse "ID  title" output sorted oldest→newest so the most recent items
@@ -107,7 +108,7 @@ export function printTerm(terms, word) {
     process.exit(1);
   }
   if (flags.json === 'true') {
-    process.stdout.write(JSON.stringify(term, null, 2) + '\n');
+    process.stdout.write(JSON.stringify(withBodyHash(term), null, 2) + '\n');
     return;
   }
   const meta = index.terms.get(term.id);
@@ -207,7 +208,7 @@ export function printSprintOverview(detail) {
     }
   }
   if (sprint.comments?.length) out.push('', `Comments: ${sprint.comments.length} (see --json)`);
-  if (sprint.body) out.push(`Project doc: ${sprint.body.length} chars (see --json)`);
+  if (sprint.body) out.push(`Project doc: ${sprint.body.length} chars, bodyHash ${bodyHash(sprint.body)} (see --json)`);
   out.push('', `Drill down: pm get <id> · full JSON: pm project ${sprint.id} --json`);
   process.stdout.write(out.join('\n') + '\n');
 }

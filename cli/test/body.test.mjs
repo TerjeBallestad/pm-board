@@ -9,6 +9,13 @@ test('bodyHash is the first 12 hex characters of the sha256 of the body as UTF-8
   // The same vectors as the server's BodyGuardTests.
   assert.equal(bodyHash(''), 'e3b0c44298fc');
   assert.equal(bodyHash('Blåbær ✓'), '652e8ec72474');
+  assert.equal(bodyHash('Blåbær\r\nline2 ✓'), '5550bf7b709e');
+});
+
+test('bodyHash keeps trailing whitespace and a trailing newline: the hash is of the body as stored', () => {
+  assert.equal(bodyHash('First line.\n'), 'a3a433f4d36f');
+  assert.equal(bodyHash('First line.'), '95b6dbc7644f');
+  assert.equal(bodyHash('Trailing space  '), '3da3095589e2');
 });
 
 test('pm get puts bodyHash next to a body, and adds none to a record with no body', () => {
