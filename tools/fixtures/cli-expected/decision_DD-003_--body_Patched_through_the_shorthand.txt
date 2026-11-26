@@ -1,5 +1,6 @@
 $ pm decision DD-003 --body "Patched through the shorthand"
-exit 0
+exit 3
 --- stdout
-updated DD-003: body (29 chars)
 --- stderr
+Refused: DD-003 has a body, and body replaces all of it. Send bodyBase, the bodyHash that pm get prints (--base <hash>), or force: true (--force) to replace it anyway. --prepend-body and --append-body add a block and need neither. A pm CLI older than 1.2 cannot send a base: run pm update.
+bodyHash ce6638b10d4f (the body as it is now)

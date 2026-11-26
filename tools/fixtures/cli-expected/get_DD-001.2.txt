@@ -8,6 +8,7 @@ exit 0
   "assignee": null,
   "blockedBy": [],
   "body": "Cookies, not tokens in local storage.\nSecond line.",
+  "bodyHash": "1863d2d760f1",
   "comments": [],
   "createdAt": "2026-01-01T10:00:00.000Z",
   "id": "DD-001",

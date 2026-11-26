@@ -98,6 +98,11 @@ export async function apiResponse(method, path, body, { silent = false } = {}) {
     process.stderr.write(`Failed: ${err.message}\nCannot reach the pm server at ${BASE_URL} (set PM_URL or "url" in ${USER_CONFIG_PATH}).\n`);
     process.exit(1);
   }
+  if (status === 409 && typeof data?.bodyHash === 'string') {
+    // The body guard (DD-030) refused a replace: nothing was written. Exit 3, not 1.
+    process.stderr.write(`Refused: ${data.error}\nbodyHash ${data.bodyHash} (the body as it is now)\n`);
+    process.exit(3);
+  }
   if (status < 200 || status >= 300) {
     process.stderr.write(`Error ${status}: ${JSON.stringify(data)}\n`);
     if (status === 401) {

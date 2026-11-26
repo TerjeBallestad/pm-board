@@ -10,6 +10,7 @@ exit 0
   "assignee": null,
   "blockedBy": [],
   "body": "The time a user stays logged in.",
+  "bodyHash": "ec750122fe67",
   "comments": [],
   "createdAt": "2026-01-01T10:00:00.000Z",
   "id": "TERM-001",

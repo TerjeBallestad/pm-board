@@ -1,0 +1,5 @@
+$ pm patch DD-003 --prepend-body "Superseded: read the block below."
+exit 0
+--- stdout
+updated DD-003: body prepended (33 chars)
+--- stderr

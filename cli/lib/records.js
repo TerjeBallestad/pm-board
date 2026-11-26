@@ -1,5 +1,6 @@
 // Record types, the routes for an id, and the request bodies that flags make.
 import { readFileSync } from 'fs';
+import { createHash } from 'crypto';
 import { api, apiResponse, flags, state, isRequestFlag, usageError } from './runtime.js';
 import { listLimit, LIST_FIELDS } from './output.js';
 
@@ -147,9 +148,45 @@ export async function expandFileArg(val, label = 'input') {
 }
 
 // --- Body resolution (inline string, @file, or - for stdin) ---
+// --prepend-body and --append-body read a file or stdin the same way.
 export async function resolveBody() {
-  if (!flags.body) return;
-  flags.body = await expandFileArg(flags.body, 'body');
+  if (flags.body && (flags['prepend-body'] || flags['append-body'])) {
+    usageError('--body replaces the whole body; --prepend-body and --append-body add a block to it. Use one or the other.');
+  }
+  for (const key of ['body', 'prepend-body', 'append-body']) {
+    if (flags[key]) flags[key] = await expandFileArg(flags[key], key);
+  }
+}
+
+// --- The body guard (DD-030) ---
+/** bodyHash: the first 12 hex characters of the sha256 of the body as UTF-8, as the server hashes it. */
+export function bodyHash(body) {
+  return createHash('sha256').update(body ?? '', 'utf8').digest('hex').slice(0, 12);
+}
+
+/** A body record as pm get prints it: bodyHash next to the body, when it has one. */
+export function withBodyHash(record) {
+  if (!record || typeof record.body !== 'string' || !record.body) return record;
+  const out = {};
+  for (const [k, v] of Object.entries(record)) {
+    out[k] = v;
+    if (k === 'body') out.bodyHash = bodyHash(v);
+  }
+  return out;
+}
+
+// The body flags, as the PATCH fields the server reads (DD-030). Null for any other flag.
+const BODY_FIELDS = { base: 'bodyBase', 'prepend-body': 'bodyPrepend', 'append-body': 'bodyAppend' };
+export function bodyField(key, val) {
+  if (key === 'force') {
+    if (val !== 'true') usageError(`--force takes no value (got "${val}")`);
+    return ['force', true];
+  }
+  if (key in BODY_FIELDS) {
+    if (val === 'true' || val === '') usageError(`--${key} needs a value`);
+    return [BODY_FIELDS[key], val];
+  }
+  return null;
 }
 
 // --- Item body builder ---
@@ -192,7 +229,9 @@ export function buildPatchBody() {
   const body = {};
   for (const [key, val] of Object.entries(flags)) {
     if (!isRequestFlag(key)) continue;
-    if (key === 'sprint') body.sprintId = val;
+    const mapped = bodyField(key, val);
+    if (mapped) body[mapped[0]] = mapped[1];
+    else if (key === 'sprint') body.sprintId = val;
     else if (key === 'files') body.affectedFiles = val.split(',');
     else if (key === 'items') body.itemIds = val.split(',');
     else if (key === 'related') body.related = val === '' ? [] : val.split(',');

@@ -1,0 +1,5 @@
+$ pm patch DD-003 --body x --append-body y
+exit 2
+--- stdout
+--- stderr
+--body replaces the whole body; --prepend-body and --append-body add a block to it. Use one or the other.

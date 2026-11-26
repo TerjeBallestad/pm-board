@@ -11,6 +11,7 @@ exit 0
   "assignee": null,
   "blockedBy": [],
   "body": "Inline body",
+  "bodyHash": "568ed9c049fe",
   "comments": [],
   "createdAt": "<new time>",
   "id": "SB-006",

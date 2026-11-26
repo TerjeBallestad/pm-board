@@ -5,9 +5,17 @@ Usage: pm patch <id> [--field value ...]
 
 Update any field on an item, design, or plan. The server refuses a field it does not know.
 
+A body write never loses text (DD-030). Items, designs and projects:
+  --prepend-body TEXT   Add a block at the top of the body (@file.md, or - for stdin)
+  --append-body TEXT    Add a block at the end of the body (@file.md, or -)
+  --body TEXT           Replace the whole body (@file.md, or -). A body with text needs
+                        --base or --force; an empty one needs neither
+  --base HASH           The bodyHash from pm get: the body you replace. If the body
+                        changed since, nothing is written and pm exits 3
+  --force               Replace the body with no check
+
 Items (SB, DD, DC, GAP, ...):
   --title T            Rename
-  --body TEXT           Set body (--body @file.md to read from file, --body - for stdin)
   --stage S             Move to stage (inbox, exploring, sdd, planned, done)
   --priority P          Set priority (low, medium, high, critical)
   --pillar P            Set design pillar
@@ -22,7 +30,6 @@ Items (SB, DD, DC, GAP, ...):
 
 Designs (SDD):
   --title T             Rename
-  --body TEXT           Set body (--body @file.md, --body -)
   --stage S             Move to stage
   --items IDs           Set linked item IDs (comma-separated)
   --sprint SPRINT-NNN   Assign to sprint
@@ -38,11 +45,15 @@ Projects (SPRINT):
   --name N              Rename
   --status S            Set status (active, completed)
 
+Exit codes: 0 done, 1 error, 2 usage, 3 a body write refused (read it again).
+
 Flags:
   --json                    After a write: the server's answer in full, not one line
 
 Examples:
   pm patch SB-042 --stage done
+  pm patch SB-042 --prepend-body @block.md
+  pm patch SB-042 --body @new.md --base 3f2a9c1b04de
   pm patch SB-042 --blockedBy SB-040,SB-041
   pm patch SB-042 --assignee ''
 --- stderr

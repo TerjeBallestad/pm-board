@@ -39,3 +39,22 @@ examples. The differences from 0.x are in DD-021: `init` makes a board on the se
 pm 1.1 removed `sweep`, `explore`, `suggest`, `review`, `plan-update`, `sdds`, `designs` and
 `sprints`: each now names the command to use instead (DD-028). `issue`, `decision`, `concern`,
 `gap`, `sdd`, `design`, `prompt`, `plans` and `sprint` still work, but the help leaves them out.
+
+## Change a body
+
+A body write never loses text (DD-030, since pm 1.2). Several agents write the same records.
+
+- To add a block, let the server do it: `pm patch SB-042 --prepend-body @block.md` puts it at the
+  top, `--append-body` at the end, one blank line from the body. No read comes first, so no read
+  can be stale. A superseding block (a correction that retires text below it) is a prepend.
+- To replace the body, name the body you replace. `pm get SB-042` prints `bodyHash`. Then
+  `pm patch SB-042 --body @new.md --base <bodyHash>`. If someone changed the body since your
+  read, the server refuses, pm prints the current hash on stderr and exits 3. Read it again and
+  redo your change.
+- `--force` replaces the body with no check. Use it only when you mean to throw away whatever is
+  there.
+- An empty body needs neither `--base` nor `--force`.
+
+`pm sdd <id>` and `pm project <id>` take the same flags. `--body`, `--prepend-body` and
+`--append-body` each read `@file` or `-` (stdin). Exit codes: 0 done, 1 error, 2 usage, 3 a body
+write refused.

@@ -19,7 +19,7 @@ import {
 } from './output.js';
 import {
   fetchListByType, routeById, commentRoute, expandFileArg, resolveBody, buildItemBody,
-  buildPatchBody, rejectCommandWordTitle
+  buildPatchBody, rejectCommandWordTitle, bodyField, bodyHash, withBodyHash
 } from './records.js';
 
 export const GROUPS = ['Read', 'Write', 'Plans and tasks', 'Projects', 'More', 'Setup'];
@@ -49,9 +49,9 @@ const get = {
   name: 'get', aliases: ['show'], group: 'Read',
   synopsis: 'get <id> [--brief]', usage: 'get <id> [--brief]',
   summary: 'One record as JSON; the terms it mentions follow',
-  help: 'Shows an item, design, plan, project or task by its id. A task comes with its planId. The\nglossary terms that its title, body and comments mention are listed after it, on stderr, so\nstdout stays pure JSON.',
+  help: 'Shows an item, design, plan, project or task by its id. A task comes with its planId. The\nglossary terms that its title, body and comments mention are listed after it, on stderr, so\nstdout stays pure JSON. A record with a body has bodyHash, for pm patch --base (DD-030).',
   flags: ['brief'],
-  flagHelp: [['--brief', 'Leave out the body and comments; show their sizes instead']],
+  flagHelp: [['--brief', 'Leave out the body and comments; show their sizes and bodyHash instead']],
   examples: ['pm get SB-042', 'pm get TASK-021', 'pm get PLAN-003 --brief'],
   async run() {
     const id = positional[0];
@@ -64,11 +64,12 @@ const get = {
       const entity = await api('GET', path, undefined, { silent: true });
       const { body, comments, ...rest } = entity;
       if (body) rest.bodyChars = body.length;
+      if (typeof body === 'string' && body) rest.bodyHash = bodyHash(body);
       if (comments?.length) rest.commentCount = comments.length;
       process.stdout.write(JSON.stringify(rest, null, 2) + '\n');
     } else {
       const entity = await api('GET', path, undefined, { silent: true });
-      process.stdout.write(JSON.stringify(entity, null, 2) + '\n');
+      process.stdout.write(JSON.stringify(withBodyHash(entity), null, 2) + '\n');
       await printGlossaryFooter(entity);
     }
   },
@@ -160,9 +161,17 @@ async function patchRecord(path, id, body) {
 
 const patchHelp = () => `Update any field on an item, design, or plan. The server refuses a field it does not know.
 
+A body write never loses text (DD-030). Items, designs and projects:
+  --prepend-body TEXT   Add a block at the top of the body (@file.md, or - for stdin)
+  --append-body TEXT    Add a block at the end of the body (@file.md, or -)
+  --body TEXT           Replace the whole body (@file.md, or -). A body with text needs
+                        --base or --force; an empty one needs neither
+  --base HASH           The bodyHash from pm get: the body you replace. If the body
+                        changed since, nothing is written and pm exits 3
+  --force               Replace the body with no check
+
 Items (SB, DD, DC, GAP, ...):
   --title T            Rename
-  --body TEXT           Set body (--body @file.md to read from file, --body - for stdin)
   --stage S             Move to stage (${state.config?.stages?.join(', ') || 'inbox, exploring, sdd, planned, done'})
   --priority P          Set priority (low, medium, high, critical)
   --pillar P            Set design pillar
@@ -177,7 +186,6 @@ Items (SB, DD, DC, GAP, ...):
 
 Designs (SDD):
   --title T             Rename
-  --body TEXT           Set body (--body @file.md, --body -)
   --stage S             Move to stage
   --items IDs           Set linked item IDs (comma-separated)
   --sprint SPRINT-NNN   Assign to sprint
@@ -191,7 +199,9 @@ Plans (PLAN):
 
 Projects (SPRINT):
   --name N              Rename
-  --status S            Set status (active, completed)`;
+  --status S            Set status (active, completed)
+
+Exit codes: 0 done, 1 error, 2 usage, 3 a body write refused (read it again).`;
 
 const patch = {
   name: 'patch', write: true, group: 'Write',
@@ -199,7 +209,7 @@ const patch = {
   summary: 'Change fields of an item, design, plan or project',
   help: patchHelp,
   fields: () => true,
-  examples: ['pm patch SB-042 --stage done', 'pm patch SB-042 --blockedBy SB-040,SB-041', "pm patch SB-042 --assignee ''"],
+  examples: ['pm patch SB-042 --stage done', 'pm patch SB-042 --prepend-body @block.md', 'pm patch SB-042 --body @new.md --base 3f2a9c1b04de', 'pm patch SB-042 --blockedBy SB-040,SB-041', "pm patch SB-042 --assignee ''"],
   async run() {
     const id = positional[0];
     if (!id) usageError('Usage: pm patch <id> [--key value ...]');
@@ -404,13 +414,17 @@ const project = {
   synopsis: 'project [<id>] [--json]',
   usage: ['project [<SPRINT-id>] [--json]', 'project create "name" [--destination D] [--body B]', 'project <SPRINT-id> [--name N] [--destination D] [--body B] [--status S]', 'project list'],
   summary: 'A project\'s overview (default: the active one), or create one',
-  help: 'With an id or none: an overview of the project, one line per item with its stage and open\nblockers, then its designs and plan progress. --json gives the full record. Ids stay SPRINT-NNN.\nWith flags after the id: changes the project. --body is its markdown doc.',
+  help: 'With an id or none: an overview of the project, one line per item with its stage and open\nblockers, then its designs and plan progress. --json gives the full record. Ids stay SPRINT-NNN.\nWith flags after the id: changes the project. --body is its markdown doc. To change a doc\nthat has text: --prepend-body or --append-body, or --body with --base (as pm patch, DD-030).',
   flags: ['json', 'destination', 'problem-statement', 'body', 'all', 'limit'],
   fields: (pos) => isId(pos[0], 'SPRINT'),
   flagHelp: [
     ['--json', 'The full project with its records'],
     ['--destination D', 'Where the project arrives (create or change)'],
     ['--body B', 'The project doc (@file.md, or -)'],
+    ['--prepend-body B', 'Add a block at the top of the doc (with an id)'],
+    ['--append-body B', 'Add a block at the end of the doc (with an id)'],
+    ['--base HASH', 'With --body on a doc with text: its bodyHash from pm get'],
+    ['--force', 'With --body: replace the doc with no check'],
     ['--name N', 'Rename (with an id)'],
     ['--status S', 'active or completed (with an id)'],
   ],
@@ -441,7 +455,9 @@ const project = {
       const patchBody = {};
       for (const [key, val] of Object.entries(flags)) {
         if (!isRequestFlag(key)) continue;
-        if (key === 'destination' || key === 'problem-statement') patchBody.problemStatement = val;
+        const mapped = bodyField(key, val);
+        if (mapped) patchBody[mapped[0]] = mapped[1];
+        else if (key === 'destination' || key === 'problem-statement') patchBody.problemStatement = val;
         else patchBody[key] = val;
       }
       await patchRecord(`/api/sprints/${action}`, action, patchBody);
@@ -476,6 +492,10 @@ const sdd = {
   fields: (pos) => isId(pos[0], 'SDD'),
   flagHelp: [
     ['--body B', 'The design doc (@file.md, or -)'],
+    ['--prepend-body B', 'Add a block at the top of the doc (with an id)'],
+    ['--append-body B', 'Add a block at the end of the doc (with an id)'],
+    ['--base HASH', 'With --body on a doc with text: its bodyHash from pm get'],
+    ['--force', 'With --body: replace the doc with no check'],
     ['--items IDs', 'Linked items'],
     ['--sprint SPRINT-NNN', 'Put it in that project'],
   ],

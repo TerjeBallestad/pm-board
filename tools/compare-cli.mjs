@@ -24,6 +24,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { startV1Board } from './v1-board.mjs';
 import { makeDiff } from './golden-diff.mjs';
 
@@ -81,6 +82,11 @@ function run(side, argv, { input, cwd = '' } = {}) {
   const r = spawnSync(process.execPath, [bin, ...argv], { cwd: join(dir, cwd), env, input: input ?? '', encoding: 'utf8', timeout: 60000 });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
+
+/** bodyHash (DD-030): the first 12 hex characters of the sha256 of the body as UTF-8. */
+const hash = (body) => createHash('sha256').update(body, 'utf8').digest('hex').slice(0, 12);
+// DD-003's body after the prepend and the two appends below, as the server joins blocks.
+const dd003Joined = 'Superseded: read the block below.\n\nPatched through the shorthand\n\nA body from a file.\n\nSecond paragraph.\n\nFrom stdin.';
 
 const parse = (s) => {
   try {
@@ -213,7 +219,17 @@ const steps = [
   ['issue'],
   ['issue', 'SB-008', '--stage', 'exploring', '--priority', 'low'],
   ['concern', 'A concern'],
-  ['decision', 'DD-003', '--body', 'Patched through the shorthand'],
+  // DD-030: a replace of a body with text names the body it replaces (--base), or says --force.
+  { differs: 'DD-030: a replace of a filled body with no base exits 3', argv: ['decision', 'DD-003', '--body', 'Patched through the shorthand'], check: (a, b) => a.code === 0 && b.code === 3 && /--base/.test(b.stderr) },
+  { differs: 'DD-030: --force replaces with no check', argv: ['decision', 'DD-003', '--body', 'Patched through the shorthand', '--force'], check: (a, b) => b.code === 0 && b.stdout === 'updated DD-003: body (29 chars)\n' },
+  { differs: 'DD-030: pm get --brief prints bodyHash', argv: ['get', 'DD-003', '--brief'], check: (a, b) => parse(b.stdout).value?.bodyHash === hash('Patched through the shorthand') },
+  { differs: 'DD-030: --prepend-body', argv: ['patch', 'DD-003', '--prepend-body', 'Superseded: read the block below.'], check: (a, b) => b.stdout === 'updated DD-003: body prepended (33 chars)\n' },
+  { differs: 'DD-030: --append-body @file', argv: ['patch', 'DD-003', '--append-body', '@body.md'], check: (a, b) => b.stdout === 'updated DD-003: body appended (39 chars)\n' },
+  { differs: 'DD-030: --append-body -', argv: ['patch', 'DD-003', '--append-body', '-'], input: 'From stdin.\n', check: (a, b) => b.stdout === 'updated DD-003: body appended (11 chars)\n' },
+  { differs: 'DD-030: pm get prints bodyHash', argv: ['get', 'DD-003'], check: (a, b) => parse(b.stdout).value?.body === dd003Joined && parse(b.stdout).value?.bodyHash === hash(dd003Joined) },
+  { differs: 'DD-030: a stale --base exits 3', argv: ['patch', 'DD-003', '--body', 'Stale copy', '--base', hash('Patched through the shorthand')], check: (a, b) => b.code === 3 && b.stderr.includes(`bodyHash ${hash(dd003Joined)}`) },
+  { differs: 'DD-030: --body with --append-body is a usage error', argv: ['patch', 'DD-003', '--body', 'x', '--append-body', 'y'], check: (a, b) => b.code === 2 },
+  { differs: 'DD-030: --base with the current hash replaces', argv: ['patch', 'DD-003', '--body', 'Patched through the shorthand', '--base', hash(dd003Joined)], check: (a, b) => b.code === 0 && b.stdout === 'updated DD-003: body (29 chars)\n' },
   ['patch', 'SB-006', '--stage', 'exploring', '--related', 'SB-001,SB-002', '--title', 'CLI issue, renamed'],
   ['patch', 'SB-006', '--blockedBy', ''],
   ['patch', 'SB-002', '--assignee', 'agent-c'],
@@ -427,8 +443,8 @@ if (expectedMode) {
 }
 
 // --- 1.x only: the commands that have no 0.x answer to compare with (DD-021) ---
-function v1In(cwd, argv, env = {}) {
-  const r = spawnSync(process.execPath, [v1Bin, ...argv], { cwd, env: { ...v1Env, ...env }, encoding: 'utf8', timeout: 60000 });
+function v1In(cwd, argv, env = {}, input = '') {
+  const r = spawnSync(process.execPath, [v1Bin, ...argv], { cwd, env: { ...v1Env, ...env }, input, encoding: 'utf8', timeout: 60000 });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 const newSlug = `${slug}-init`;
@@ -518,6 +534,26 @@ const only = [
   }, (r) => r.code === 0 && r.stdout === 'created SB-002 (issue): Receipt check\n|Receipt check, JSON'],
   ['a claim says until when', () => v1In(repoB, ['claim', 'SB-002', '--as', 'agent-z']), (r) => r.code === 0 && /^claimed SB-002 for agent-z until \d{4}-\d\d-\d\dT/.test(r.stdout)],
   ['a patch names each field as the server has it', () => v1In(repoB, ['patch', 'SB-002', '--stage', 'exploring', '--related', 'SB-001', '--body', 'twelve chars']), (r) => r.code === 0 && r.stdout === 'updated SB-002: stage exploring, related SB-001, body (12 chars)\n'],
+  // A body write never loses text (PLAN-004, DD-030).
+  ['the bodyHash pm get prints is the one the server checks', () => {
+    const got = parse(v1In(repoB, ['get', 'SB-002']).stdout).value;
+    const refused = v1In(repoB, ['patch', 'SB-002', '--body', 'No base']);
+    return { code: refused.code, stdout: String(got?.bodyHash === hash(got?.body ?? '') && refused.stderr.includes(`bodyHash ${got?.bodyHash}`)), stderr: refused.stderr };
+  }, (r) => r.code === 3 && r.stdout === 'true' && /--force/.test(r.stderr) && /pm update/.test(r.stderr)],
+  ['two agents read one body: the first replace wins, the stale one exits 3, and no line is lost', () => {
+    const base = parse(v1In(repoB, ['get', 'SB-002']).stdout).value?.bodyHash;
+    const other = v1In(repoB, ['patch', 'SB-002', '--append-body', '-'], {}, 'A line from the second agent.');
+    const stale = v1In(repoB, ['patch', 'SB-002', '--body', 'Built from the stale read', '--base', base]);
+    const body = parse(v1In(repoB, ['get', 'SB-002']).stdout).value?.body ?? '';
+    return { code: stale.code, stdout: other.stdout + String(body.endsWith('\n\nA line from the second agent.')), stderr: stale.stderr };
+  }, (r) => r.code === 3 && r.stdout === 'updated SB-002: body appended (29 chars)\ntrue' && /changed since you read it/.test(r.stderr)],
+  ['pm sdd <id> and pm project <id> take the body flags', () => {
+    const a = v1In(repoB, ['sdd', 'SDD-001', '--append-body', 'Design addendum', '--board', slug]);
+    const b = v1In(repoB, ['project', 'SPRINT-001', '--prepend-body', 'Project note', '--board', slug]);
+    const doc = parse(v1In(repoB, ['get', 'SPRINT-001', '--board', slug]).stdout).value;
+    const c = v1In(repoB, ['project', 'SPRINT-001', '--body', 'Replaced', '--base', doc?.bodyHash, '--board', slug]);
+    return { code: a.code || b.code || c.code, stdout: a.stdout + b.stdout + c.stdout, stderr: a.stderr + b.stderr + c.stderr };
+  }, (r) => r.code === 0 && r.stdout === 'updated SDD-001: body appended (15 chars)\nupdated SPRINT-001: body prepended (12 chars)\nupdated SPRINT-001: body (8 chars)\n'],
   // The server sorts, cuts and finds terms (PLAN-003 Task 6, DD-029).
   ['pm list --limit 2 prints the newest 2 rows of pm list --json, and counts the rest', () => {
     const all = parse(v1In(repoB, ['list', '--json', '--board', slug]).stdout).value ?? [];

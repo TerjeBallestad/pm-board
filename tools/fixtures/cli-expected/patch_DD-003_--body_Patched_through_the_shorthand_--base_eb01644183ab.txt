@@ -1,0 +1,5 @@
+$ pm patch DD-003 --body "Patched through the shorthand" --base eb01644183ab
+exit 0
+--- stdout
+updated DD-003: body (29 chars)
+--- stderr

@@ -10,6 +10,7 @@ exit 0
   "assignee": null,
   "blockedBy": [],
   "body": "Users cannot log in after a session ends.\n",
+  "bodyHash": "18e3d691908b",
   "comments": [
     {
       "author": "terje",

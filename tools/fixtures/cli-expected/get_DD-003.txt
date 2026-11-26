@@ -1,0 +1,24 @@
+$ pm get DD-003
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "body": "Superseded: read the block below.\n\nPatched through the shorthand\n\nA body from a file.\n\nSecond paragraph.\n\nFrom stdin.",
+  "bodyHash": "eb01644183ab",
+  "comments": [],
+  "createdAt": "<new time>",
+  "id": "DD-003",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "title": "CLI decision",
+  "type": "decision",
+  "updatedAt": "<new time>"
+}
+--- stderr

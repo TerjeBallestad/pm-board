@@ -1,0 +1,23 @@
+$ pm get DD-003 --brief
+exit 0
+--- stdout (JSON, keys sorted)
+{
+  "affectedFiles": [],
+  "aliases": [],
+  "assignedAt": null,
+  "assignee": null,
+  "blockedBy": [],
+  "bodyChars": 29,
+  "bodyHash": "892f4406a79c",
+  "createdAt": "<new time>",
+  "id": "DD-003",
+  "pillar": "",
+  "priority": null,
+  "related": [],
+  "sprintId": "SPRINT-001",
+  "stage": "inbox",
+  "title": "CLI decision",
+  "type": "decision",
+  "updatedAt": "<new time>"
+}
+--- stderr

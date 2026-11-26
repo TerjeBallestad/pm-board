@@ -10,6 +10,7 @@ exit 0
   "assignee": null,
   "blockedBy": [],
   "bodyChars": 42,
+  "bodyHash": "18e3d691908b",
   "commentCount": 1,
   "createdAt": "2026-01-01T10:00:00.000Z",
   "id": "SB-001",

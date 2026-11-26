@@ -1,0 +1,5 @@
+$ pm decision DD-003 --body "Patched through the shorthand" --force
+exit 0
+--- stdout
+updated DD-003: body (29 chars)
+--- stderr

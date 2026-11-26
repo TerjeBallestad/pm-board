@@ -1,0 +1,6 @@
+$ pm patch DD-003 --body "Stale copy" --base 892f4406a79c
+exit 3
+--- stdout
+--- stderr
+Refused: The body of DD-003 changed since you read it (base 892f4406a79c, now eb01644183ab). Nothing was written. Read it again (pm get DD-003), redo your change on what you read, and send --base eb01644183ab.
+bodyHash eb01644183ab (the body as it is now)

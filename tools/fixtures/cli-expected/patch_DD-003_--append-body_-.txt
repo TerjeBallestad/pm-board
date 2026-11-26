@@ -1,0 +1,6 @@
+$ pm patch DD-003 --append-body -
+(stdin "From stdin.\n")
+exit 0
+--- stdout
+updated DD-003: body appended (11 chars)
+--- stderr

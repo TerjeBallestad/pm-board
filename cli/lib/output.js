@@ -323,10 +323,16 @@ function shortValue(key, v) {
 // The request names some fields otherwise than the record does.
 const FIELD_OF = { sprint: 'sprintId', files: 'affectedFiles', items: 'itemIds' };
 
+// The body guard's fields (DD-030): a block added reads as its size; the base and force say nothing.
+const BODY_BLOCK = { bodyPrepend: 'prepended', bodyAppend: 'appended' };
+const UNPRINTED = new Set(['bodyBase', 'force']);
+
 /** `stage done, priority high, body (120 chars)`: each field sent, as the answer has it. */
 export function changes(sent, answer) {
   return Object.keys(sent)
+    .filter((k) => !UNPRINTED.has(k))
     .map((k) => {
+      if (k in BODY_BLOCK) return `body ${BODY_BLOCK[k]} ${shortValue('body', sent[k])}`;
       const field = FIELD_OF[k] || k;
       const v = answer && field in answer ? answer[field] : sent[k];
       if (field === 'tasks' && Array.isArray(v)) return `tasks (${v.length})`;

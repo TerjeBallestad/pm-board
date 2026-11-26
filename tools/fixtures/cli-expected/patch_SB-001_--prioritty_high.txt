@@ -2,4 +2,4 @@ $ pm patch SB-001 --prioritty high
 exit 1
 --- stdout
 --- stderr
-Error 400: {"error":"Unknown field \"prioritty\" for an item. Allowed: title, priority, pillar, stage, body, related, affectedFiles, blockedBy, aliases, sprintId, assignee"}
+Error 400: {"error":"Unknown field \"prioritty\" for an item. Allowed: title, priority, pillar, stage, body, bodyPrepend, bodyAppend, bodyBase, force, related, affectedFiles, blockedBy, aliases, sprintId, assignee"}
