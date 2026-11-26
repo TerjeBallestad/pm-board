@@ -113,6 +113,21 @@ test('Start copies the configured command', async ({ page, context }) => {
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/work SB-001');
 });
 
+test("Bob's component classes come from the app's Tailwind build and win over its element rules", async ({ page }) => {
+  // DD-031: app.css imports @terjeballestad/bob/tailwind.css. Its button rule sits in @layer base;
+  // unlayered, `button { font: inherit; color: inherit }` would beat Bob's btn and nav-row classes.
+  await page.goto(`${B}/tickets?open=SB-001`);
+  const start = page.getByRole('button', { name: '⧉ Start' });
+  await expect(start).toHaveClass(/\bbtn btn-sm btn-primary\b/);
+  await expect(start).toHaveCSS('font-size', '11.5px');
+  await expect(start).toHaveCSS('color', 'rgb(15, 16, 20)');
+  const active = page.locator('.pm-nav .nav-row-active');
+  await expect(active).toHaveCSS('font-size', '12.5px');
+  await expect(active).toHaveCSS('font-weight', '600');
+  const css = await page.evaluate(() => [...document.styleSheets].flatMap((s) => [...s.cssRules].map((r) => r.cssText)).join('\n'));
+  expect(css).toMatch(/@layer utilities \{[\s\S]*\.btn-sm \{/);
+});
+
 test('quick open finds a record by key or title', async ({ page }) => {
   await page.goto(`${B}/tickets`);
   // The shortcut listens once the board has rendered; a key pressed before that is lost.

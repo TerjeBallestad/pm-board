@@ -1,8 +1,18 @@
 /* pm board dashboard. Every colour, size and font is a Bob token (TOKENS.md in @terjeballestad/bob). */
 
-html, body, #root { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
-button { font: inherit; color: inherit; }
+/* Tailwind without its preflight: this CSS was written against Bob's reset alone (Bob's base.css),
+   as Bob's Storybook is. Bob's component classes come from the last import (DD-031). */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "@terjeballestad/bob/tailwind.css";
+
+/* Element rules sit in the base layer, under Bob's component classes and the utilities. */
+@layer base {
+  html, body, #root { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  button { font: inherit; color: inherit; }
+}
 
 /* ── Frame ─────────────────────────────────────────────── */
 .pm-app {
