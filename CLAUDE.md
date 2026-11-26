@@ -89,6 +89,12 @@ Red-green: when you add a test, break the code it guards once and watch it fail.
 - A 0.x board's data dir can hold its own `.git`: the tools skip hidden folders.
 - **Colima shares only `$HOME` with its VM.** A `docker run -v` of a `mktemp -d` folder (under
   /var/folders) mounts an empty folder, and the container prints nothing. Use a folder under `$HOME`.
+- **0.x's `pm update` reinstalls the global pm as 0.x.** It ignores its arguments and runs
+  `npm install -g @terjeballestad/pm-board-cli@0`. Anything that runs 0.x's bin/pm with `update`
+  does this, as compare-cli.mjs in its 0.x mode did before e789071. Check `pm --version` after
+  anything that runs 0.x's bin/pm.
+- **`pkill -f PmBoard.Api` stops every PmBoard.Api on the Mac**, other sessions' servers too.
+  Stop your own server by its PID.
 - **`.gitignore` has `bin/` for .NET**, and `!cli/bin/` lets the CLI's command in. A new `bin/`
   folder outside server/ needs the same exception.
 
