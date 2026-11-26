@@ -52,11 +52,14 @@ public static partial class SprintWrites
         var r = await w.Lock(RecordKind.Sprint, key);
         if (r is null) return ReadRoutes.NotFound();
         var b = w.Body;
-        if (w.Unknown("a project", "name", "problemStatement", "body", "status") is { } unknown) return unknown;
+        if (w.Unknown("a project", "name", "problemStatement", "body", "bodyPrepend", "bodyAppend", "bodyBase", "force", "status") is { } unknown)
+        {
+            return unknown;
+        }
+        if (BodyGuard.Apply(w, r) is { } refused) return refused;
         var fields = Write.Fields(r);
         if (Js.Has(b, "name")) r.Title = Js.Text(b["name"]) ?? "";
         if (Js.Has(b, "problemStatement")) fields["problemStatement"] = b["problemStatement"]?.DeepClone();
-        if (Js.Has(b, "body")) r.Body = Js.Text(b["body"]);
         if (Js.Has(b, "status")) r.Status = Js.Text(b["status"]);
         if (b["status"]?.GetValueKind() == JsonValueKind.String && (string)b["status"]! == "completed")
         {

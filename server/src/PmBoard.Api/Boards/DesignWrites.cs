@@ -54,10 +54,13 @@ public static class DesignWrites
         var r = await w.Lock(RecordKind.Design, key);
         if (r is null) return ReadRoutes.NotFound();
         var b = w.Body;
-        if (w.Unknown("a design", "title", "body", "itemIds", "stage", "sprintId") is { } unknown) return unknown;
+        if (w.Unknown("a design", "title", "body", "bodyPrepend", "bodyAppend", "bodyBase", "force", "itemIds", "stage", "sprintId") is { } unknown)
+        {
+            return unknown;
+        }
+        if (BodyGuard.Apply(w, r) is { } refused) return refused;
         Js.CoerceArray(b, "itemIds");
         if (Js.Has(b, "title")) r.Title = Js.Text(b["title"]) ?? "";
-        if (Js.Has(b, "body")) r.Body = Js.Text(b["body"]);
         if (Js.Has(b, "stage")) r.Stage = Js.Text(b["stage"]);
         if (Js.Has(b, "sprintId")) r.SprintKey = Js.Text(b["sprintId"]);
         if (Js.Has(b, "itemIds"))

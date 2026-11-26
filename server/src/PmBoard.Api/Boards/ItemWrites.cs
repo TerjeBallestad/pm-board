@@ -10,7 +10,7 @@ namespace PmBoard.Api.Boards;
 public static class ItemWrites
 {
     private static readonly string[] PatchFields =
-        ["title", "priority", "pillar", "stage", "body", "related", "affectedFiles", "blockedBy", "aliases", "sprintId", "assignee"];
+        ["title", "priority", "pillar", "stage", "body", "bodyPrepend", "bodyAppend", "bodyBase", "force", "related", "affectedFiles", "blockedBy", "aliases", "sprintId", "assignee"];
 
     public static void MapItemWrites(this RouteGroupBuilder g)
     {
@@ -86,12 +86,12 @@ public static class ItemWrites
         {
             return Write.Error(400, $"Invalid stage. Must be one of: {string.Join(", ", stages)}");
         }
+        if (BodyGuard.Apply(w, r) is { } refused) return refused;
 
         var fields = Write.Fields(r);
         if (Js.Has(b, "title")) r.Title = Js.Text(b["title"]) ?? "";
         if (Js.Has(b, "priority")) r.Priority = Js.Text(b["priority"]);
         if (Js.Has(b, "stage")) r.Stage = Js.Text(b["stage"]);
-        if (Js.Has(b, "body")) r.Body = Js.Text(b["body"]);
         if (Js.Has(b, "sprintId")) r.SprintKey = Js.Text(b["sprintId"]);
         if (Js.Has(b, "blockedBy")) Write.SetBlockedBy(r, fields, b["blockedBy"]);
         foreach (var name in new[] { "pillar", "related", "affectedFiles", "aliases" })

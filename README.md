@@ -142,6 +142,12 @@ and never writes into a folder that exists.
   `sprints/{id}/explore`; `context/prompt`, `context/review`. A PATCH with an unknown field is
   400 (DD-016). Prompt and review list their knowledge-base queries in `qmdQueries` for the CLI
   to run (DD-017). Each write needs a token (see Tokens).
+- A body write never loses text (DD-030). PATCH on `items/{id}`, `designs/{id}` and
+  `sprints/{id}` takes `bodyPrepend` and `bodyAppend`, which add a block in the update's
+  transaction, one blank line from the body. `body` replaces the whole body: on a body with text it
+  needs `bodyBase` (the `bodyHash` that `pm get` prints, the first 12 hex characters of the
+  sha256 of the body) or `force: true`. A stale or missing base is 409 `{error, bodyHash}`, and
+  nothing changes. A 0.x or 1.1 CLI sends no base, so it cannot replace a filled body.
 - `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
 - `/api/boards/{slug}/tasks/{key}`: one task as it is inside its plan, with `planId`, for
   `pm get TASK-NNN` (DD-026). 0.x had no such route.

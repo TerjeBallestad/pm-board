@@ -12,6 +12,7 @@
 // unless --base points at one that uses the same database. Build the server first
 // (dotnet build server/PmBoard.slnx).
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { openV0Board } from './v0-board.mjs';
 import { startV1Board } from './v1-board.mjs';
@@ -104,6 +105,9 @@ async function compareReads() {
 // Keys are written out: both sides must give the same ones. The fixture's highest keys are SB-005
 // (archived), DD-002, TERM-001, SDD-001, PLAN-002, TASK-004 and SPRINT-001.
 // A step with `differs` is a change from 0.x that a DD describes: only 1.x's status is checked.
+// 0.x then gets the same step, or its own `v0` step that does what 1.x did (null: none).
+/** bodyHash (DD-030): the first 12 hex characters of the sha256 of the body as UTF-8. */
+const hash = (body) => createHash('sha256').update(body, 'utf8').digest('hex').slice(0, 12);
 const A = 'TASK-005';
 const B = 'TASK-006';
 const steps = [
@@ -120,6 +124,16 @@ const steps = [
   ['PATCH', '/items/SB-404', { title: 'x' }],
   ['PATCH', '/items/SB-007', { body: '' }],
   ['PATCH', '/items/SB-007', { body: 'Now with a body', priority: null, sprintId: 'SPRINT-001' }],
+  // body guard (DD-030): a replace of a body with text names the body it replaces, or says force.
+  // 0.x ignores bodyBase and force, so a replace that passes the guard is the same on both sides.
+  { differs: 'DD-030', step: ['PATCH', '/items/SB-007', { body: 'Stale copy' }], v1: 409, v0: null },
+  { differs: 'DD-030', step: ['PATCH', '/items/SB-007', { body: 'Stale copy', bodyBase: hash('Old body') }], v1: 409, v0: null },
+  ['PATCH', '/items/SB-007', { body: 'Replaced', bodyBase: hash('Now with a body') }],
+  { differs: 'DD-030', step: ['PATCH', '/items/SB-007', { bodyPrepend: 'Superseded.' }], v1: 200, v0: ['PATCH', '/items/SB-007', { body: 'Superseded.\n\nReplaced' }] },
+  { differs: 'DD-030', step: ['PATCH', '/items/SB-007', { bodyAppend: 'Appended.' }], v1: 200, v0: ['PATCH', '/items/SB-007', { body: 'Superseded.\n\nReplaced\n\nAppended.' }] },
+  { differs: 'DD-030', step: ['PATCH', '/items/SB-007', { body: 'x', bodyAppend: 'y' }], v1: 400, v0: null },
+  ['PATCH', '/items/SB-007', { title: 'Same body after the guard' }],
+  ['PATCH', '/items/SB-007', { body: 'Forced', force: true }],
   ['PATCH', '/items/SB-002', { assignee: 'agent-a' }],
   ['PATCH', '/items/SB-002', { assignee: '' }],
   ['PATCH', '/items/TERM-001', { aliases: 'the-session,sessions' }],
@@ -150,7 +164,8 @@ const steps = [
   ['POST', '/designs', { title: 'Session design', itemIds: ['SB-002', 'SB-404', 'DD-002'], sprintId: 'SPRINT-001', body: 'Design body' }],
   ['POST', '/designs', { body: 'no title' }],
   ['PATCH', '/designs/SDD-002', { stage: 'planned', itemIds: 'SB-002' }],
-  ['PATCH', '/designs/SDD-002', { body: '' }],
+  { differs: 'DD-030', step: ['PATCH', '/designs/SDD-002', { body: '' }], v1: 409, v0: null },
+  ['PATCH', '/designs/SDD-002', { body: '', bodyBase: hash('Design body') }],
   ['PATCH', '/designs/SDD-404', { stage: 'planned' }],
   ['POST', '/designs/SDD-002/comments', { text: 'Design note' }],
   ['POST', '/designs/SDD-404/comments', { text: 'x' }],
@@ -192,6 +207,8 @@ const steps = [
   ['POST', '/sprints/SPRINT-002/explore', {}],
   ['POST', '/sprints/SPRINT-404/explore', {}],
   ['PATCH', '/sprints/SPRINT-002', { problemStatement: 'Tokens', body: 'The project doc' }],
+  { differs: 'DD-030', step: ['PATCH', '/sprints/SPRINT-002', { body: 'Stale doc' }], v1: 409, v0: null },
+  ['PATCH', '/sprints/SPRINT-002', { body: 'The project doc, second', bodyBase: hash('The project doc') }],
   ['PATCH', '/sprints/SPRINT-002', { status: 'completed' }],
   ['PATCH', '/sprints/SPRINT-404', { status: 'completed' }],
   // prompts and reviews
@@ -238,7 +255,8 @@ for (let i = 0; i < steps.length; i++) {
     console.log(`${ok ? 'ok  ' : 'DIFF'}  ${step.step[0]} ${step.step[1]}: 1.x ${b.status} (${step.differs}) ${show(b.data)}`);
     if (!ok) failures++;
     if (step.last) break;
-    await v0(...step.step);
+    const v0step = 'v0' in step ? step.v0 : step.step;
+    if (v0step) await v0(...v0step);
     continue;
   }
   const [method, path, body] = step;

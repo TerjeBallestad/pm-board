@@ -112,6 +112,14 @@ Users and tokens are not per board: a token writes to every board (DD-003, DD-02
   changes with `FOR UPDATE` first. Two claims of one item take turns, so exactly one wins, and two
   comments on one record get positions one after the other. A refused write (any 4xx) rolls back,
   so its key numbers go back to the counter.
+- **A body write never loses text (DD-030).** PATCH on an item, a design or a project takes
+  `bodyPrepend` and `bodyAppend`, which add a block in the update's transaction, with one blank line
+  between it and the body (on a blank body, the text alone). `body` replaces the whole body. On a
+  body with text, `body` needs `bodyBase`, the `bodyHash` of the body it replaces, or
+  `force: true`. `bodyHash` is the first 12 hex characters of the sha256 of the body as UTF-8
+  (`Boards/BodyGuard.cs`). The route locks the row before it hashes, so of two replaces with one
+  base, one wins and the other gets 409 `{error, bodyHash}` with the current hash. A missing base
+  is 409 too. `body` with `bodyPrepend` or `bodyAppend` is 400. A blank body needs no base.
 - **A key given by hand moves the counter past it.** A plan's task list in PATCH may hold a key
   that is not taken yet. The counter then never gives that number out (DD-016).
 - **Only a token's hash is stored.** A token is `pmb_` and 32 random bytes, so SHA-256 is enough:
@@ -177,7 +185,7 @@ and 1.x copies them:
 - Lists that build text (explore, suggest, prompt, review) take records in key order, the order of
   0.x's sorted file names.
 
-What 1.x does differently on purpose is in DD-016 to DD-019.
+What 1.x does differently on purpose is in DD-016 to DD-019, and DD-030 (the body guard).
 
 ### Known differences from 0.x output
 
