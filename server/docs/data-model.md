@@ -120,6 +120,7 @@ Users and tokens are not per board: a token writes to every board (DD-003, DD-02
   (`Boards/BodyGuard.cs`). The route locks the row before it hashes, so of two replaces with one
   base, one wins and the other gets 409 `{error, bodyHash}` with the current hash. A missing base
   is 409 too. `body` with `bodyPrepend` or `bodyAppend` is 400. A blank body needs no base.
+  `bodyBase` is compared without case. A `bodyBase` that is not 12 hex characters is 400.
 - **A key given by hand moves the counter past it.** A plan's task list in PATCH may hold a key
   that is not taken yet. The counter then never gives that number out (DD-016).
 - **Only a token's hash is stored.** A token is `pmb_` and 32 random bytes, so SHA-256 is enough:

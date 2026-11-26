@@ -64,6 +64,8 @@ public class BodyGuardTests(BoardFactory factory) : IClassFixture<BoardFactory>,
     [Theory]
     [InlineData("", "e3b0c44298fc")]
     [InlineData("Blåbær ✓", "652e8ec72474")]
+    [InlineData("Blåbær\r\nline2 ✓", "5550bf7b709e")]
+    [InlineData("First line.\n", "a3a433f4d36f")]
     public void The_hash_is_12_hex_characters_of_the_sha256_of_the_utf8_body(string body, string hash) =>
         Assert.Equal(hash, BodyGuard.Hash(body));
 
@@ -130,6 +132,29 @@ public class BodyGuardTests(BoardFactory factory) : IClassFixture<BoardFactory>,
         Assert.Equal("Second", await BodyOf(slug, path));
         Assert.Equal(HttpStatusCode.OK, (await Patch(slug, path, new { body = "Third", force = true })).Status);
         Assert.Equal("Third", await BodyOf(slug, path));
+    }
+
+    [Fact]
+    public async Task A_right_base_in_uppercase_writes_the_body()
+    {
+        var slug = await Board();
+        var upper = BodyGuard.Hash("First line.\n").ToUpperInvariant();
+        Assert.Equal(HttpStatusCode.OK, (await Patch(slug, "/items/SB-001", new { body = "Second", bodyBase = upper })).Status);
+        Assert.Equal("Second", await BodyOf(slug, "/items/SB-001"));
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("e3b0c44298fc1")]
+    [InlineData("g3b0c44298fc")]
+    [InlineData("")]
+    public async Task A_base_that_is_not_a_hash_is_400_and_says_so(string bodyBase)
+    {
+        var slug = await Board();
+        var refused = await Patch(slug, "/items/SB-001", new { body = "New", bodyBase });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+        Assert.Contains("is not a bodyHash", (string)refused.Body!["error"]!);
+        Assert.Equal("First line.\n", await BodyOf(slug, "/items/SB-001"));
     }
 
     [Fact]

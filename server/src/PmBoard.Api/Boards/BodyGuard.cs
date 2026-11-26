@@ -45,6 +45,11 @@ public static class BodyGuard
             }
         }
         if (hasBase && b["bodyBase"]?.GetValueKind() != JsonValueKind.String) return Write.Error(400, "bodyBase must be the bodyHash text");
+        var bodyBase = hasBase ? ((string)b["bodyBase"]!).ToLowerInvariant() : null;
+        if (bodyBase is not null && !IsHash(bodyBase))
+        {
+            return Write.Error(400, $"bodyBase {(string)b["bodyBase"]!} is not a bodyHash: a bodyHash is 12 hex characters, as pm get prints it");
+        }
         if (hasForce && b["force"]?.GetValueKind() is not (JsonValueKind.True or JsonValueKind.False))
         {
             return Write.Error(400, "force must be true or false");
@@ -52,10 +57,10 @@ public static class BodyGuard
 
         var force = b["force"]?.GetValueKind() == JsonValueKind.True;
         var current = Hash(r.Body);
-        if (!force && hasBase && (string)b["bodyBase"]! != current)
+        if (!force && bodyBase is not null && bodyBase != current)
         {
             return Refuse(
-                $"The body of {r.Key} changed since you read it (base {(string)b["bodyBase"]!}, now {current}). "
+                $"The body of {r.Key} changed since you read it (base {bodyBase}, now {current}). "
                     + $"Nothing was written. Read it again (pm get {r.Key}), redo your change on what you read, and send --base {current}.",
                 current
             );
@@ -75,6 +80,9 @@ public static class BodyGuard
         if (append) r.Body = Join(r.Body, (string)b["bodyAppend"]!);
         return null;
     }
+
+    /// <summary>True for 12 lowercase hex characters, the form Hash returns.</summary>
+    private static bool IsHash(string s) => s.Length == 12 && s.All(c => c is (>= '0' and <= '9') or (>= 'a' and <= 'f'));
 
     /// <summary>Two blocks with one blank line between them. On a blank side, the other side alone.</summary>
     private static string Join(string? first, string? second)

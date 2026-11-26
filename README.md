@@ -147,7 +147,8 @@ and never writes into a folder that exists.
   transaction, one blank line from the body. `body` replaces the whole body: on a body with text it
   needs `bodyBase` (the `bodyHash` that `pm get` prints, the first 12 hex characters of the
   sha256 of the body) or `force: true`. A stale or missing base is 409 `{error, bodyHash}`, and
-  nothing changes. A 0.x or 1.1 CLI sends no base, so it cannot replace a filled body.
+  nothing changes. A `bodyBase` that is not 12 hex characters is 400. A 0.x or 1.1 CLI sends
+  no base, so it cannot replace a filled body.
 - `/api/boards/{slug}/plans/{id}/next-task` and `/plans/{id}/context`: 0.x's two plan reads.
 - `/api/boards/{slug}/tasks/{key}`: one task as it is inside its plan, with `planId`, for
   `pm get TASK-NNN` (DD-026). 0.x had no such route.
