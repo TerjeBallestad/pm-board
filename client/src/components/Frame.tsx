@@ -18,13 +18,13 @@ import { navigate } from '../router';
 import { relativeTime } from '../time';
 
 export const VIEWS = [
-  { view: 'inbox', label: 'Inbox', dot: 'dashed' as const, color: 'var(--text-3)' },
-  { view: 'tickets', label: 'Tickets', dot: 'solid' as const, color: 'var(--text-3)' },
-  { view: 'documents', label: 'Documents', dot: 'solid' as const, color: 'var(--accent)' },
-  { view: 'plans', label: 'Plans', dot: 'solid' as const, color: 'var(--green)' },
-  { view: 'decisions', label: 'Decisions', dot: 'solid' as const, color: 'var(--blue)' },
-  { view: 'glossary', label: 'Glossary', dot: 'solid' as const, color: 'var(--green)' },
-  { view: 'archive', label: 'Archive', dot: 'solid' as const, color: 'var(--text-4)' },
+  { view: 'inbox', label: 'Inbox', dot: 'dashed' as const, color: 'var(--text-muted)' },
+  { view: 'tickets', label: 'Tickets', dot: 'solid' as const, color: 'var(--text-muted)' },
+  { view: 'documents', label: 'Documents', dot: 'solid' as const, color: 'var(--bg-accent)' },
+  { view: 'plans', label: 'Plans', dot: 'solid' as const, color: 'var(--bg-green)' },
+  { view: 'decisions', label: 'Decisions', dot: 'solid' as const, color: 'var(--text-blue)' },
+  { view: 'glossary', label: 'Glossary', dot: 'solid' as const, color: 'var(--bg-green)' },
+  { view: 'archive', label: 'Archive', dot: 'solid' as const, color: 'var(--text-faint)' },
 ];
 export type ViewName = (typeof VIEWS)[number]['view'] | 'project';
 
@@ -50,7 +50,7 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
           <span className="pm-brand-name">{board.config.name || board.slug}</span>
         </button>
         <span data-live={live} title={live ? 'Live: changes appear as they happen' : 'Not connected: reload to see changes'}>
-          <StatusDot state={live ? 'live' : 'outline'} color={live ? 'var(--green)' : 'var(--text-4)'} size={7} />
+          <StatusDot state={live ? 'live' : 'outline'} color={live ? 'var(--bg-green)' : 'var(--text-faint)'} size={7} />
         </span>
       </div>
       <button className="pm-search-btn" onClick={onQuickOpen}>
@@ -85,7 +85,7 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
                 </span>
               }
               active={active}
-              dot={<StatusDot state={done ? 'solid' : 'live'} color={done ? 'var(--text-4)' : active ? 'var(--accent)' : 'var(--green)'} size={7} />}
+              dot={<StatusDot state={done ? 'solid' : 'live'} color={done ? 'var(--text-faint)' : active ? 'var(--bg-accent)' : 'var(--bg-green)'} size={7} />}
               count={null}
               onClick={() => navigate(`/${board.slug}/project/${p.id}`)}
             />

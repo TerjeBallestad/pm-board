@@ -120,7 +120,7 @@ export function TicketsView({ projectId }: { projectId?: string }) {
         return (
           <section key={stage} className="pm-column">
             <div className="pm-column-head">
-              <StatusDot state={stage === 'inbox' ? 'dashed' : stage === 'done' ? 'solid' : 'outline'} color={stage === 'done' ? 'var(--green)' : 'var(--text-3)'} size={8} />
+              <StatusDot state={stage === 'inbox' ? 'dashed' : stage === 'done' ? 'solid' : 'outline'} color={stage === 'done' ? 'var(--bg-green)' : 'var(--text-muted)'} size={8} />
               <span className="pm-column-title">{stage.charAt(0).toUpperCase() + stage.slice(1)}</span>
               <span className="pm-column-count">{cards.length}</span>
             </div>
@@ -161,7 +161,7 @@ export function InboxView() {
           <ListRow
             key={t.id}
             id={t.id}
-            idColor={kind ? kindColor(kind) : 'var(--text-3)'}
+            idColor={kind ? kindColor(kind) : 'var(--text-muted)'}
             title={displayTitle(t)}
             meta={meta.length ? <span className="pm-meta">{meta}</span> : undefined}
             age={shortTime(t.createdAt)}
@@ -225,7 +225,7 @@ export function PlansView() {
       {active.length ? sorted(active).map(row) : <div className="pm-empty-inline">Nothing executing.</div>}
       {done.length > 0 && (
         <>
-          <SectionLabel dot={<StatusDot state="solid" color="var(--text-4)" size={7} square />} action={<span className="pm-count">{done.length}</span>} style={{ marginTop: 18 }}>
+          <SectionLabel dot={<StatusDot state="solid" color="var(--text-faint)" size={7} square />} action={<span className="pm-count">{done.length}</span>} style={{ marginTop: 18 }}>
             Done
           </SectionLabel>
           {sorted(done).map(row)}
@@ -351,7 +351,7 @@ export function ArchiveView() {
         const kind = ticketKind(t);
         return (
           <div key={t.id}>
-            <ListRow id={t.id} idColor={kind ? kindColor(kind) : 'var(--text-4)'} title={displayTitle(t)} age={shortTime(t.updatedAt)} done onClick={() => setExpanded(expanded === t.id ? null : t.id)} />
+            <ListRow id={t.id} idColor={kind ? kindColor(kind) : 'var(--text-faint)'} title={displayTitle(t)} age={shortTime(t.updatedAt)} done onClick={() => setExpanded(expanded === t.id ? null : t.id)} />
             {expanded === t.id && (
               <div className="pm-archive-body">
                 <Markdown text={t.body || '(no description)'} />

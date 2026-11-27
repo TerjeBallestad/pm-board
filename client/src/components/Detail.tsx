@@ -124,7 +124,7 @@ function RefChips({ label, ids, done }: { label: string; ids: string[]; done?: (
         const isDone = done?.(rid) ?? false;
         const c = kindColor(ticketKind(index.get(rid)));
         return (
-          <button key={rid} className="pm-waitchip" style={{ color: isDone ? 'var(--text-3)' : c, background: isDone ? 'transparent' : `${c}14` }} onClick={() => open(rid)}>
+          <button key={rid} className="pm-waitchip" style={{ color: isDone ? 'var(--text-muted)' : c, background: isDone ? 'transparent' : `${c}14` }} onClick={() => open(rid)}>
             {rid}
             {isDone ? ' ✓' : ''}
           </button>

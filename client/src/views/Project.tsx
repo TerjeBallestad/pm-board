@@ -91,7 +91,7 @@ export function ProjectView({ id, mode }: { id: string; mode: 'map' | 'board' })
               <button key={pl.id} className={`pm-exec${pl.stage === 'done' ? ' pm-exec-done' : ''}`} onClick={() => open(pl.id)}>
                 <span className="pm-exec-id">{pl.id}</span>
                 <span className="pm-exec-title">{displayTitle(pl)}</span>
-                <ProgressBar value={prog.done} max={Math.max(prog.total, 1)} width={40} height={3} color="var(--green)" />
+                <ProgressBar value={prog.done} max={Math.max(prog.total, 1)} width={40} height={3} color="var(--bg-green)" />
                 <span className="pm-mono-dim">
                   {prog.done}/{prog.total}
                 </span>
@@ -102,7 +102,7 @@ export function ProjectView({ id, mode }: { id: string; mode: 'map' | 'board' })
         </div>
       )}
       <div className="pm-pcols">
-        <Column title="Frontier" count={frontier.length} hint="unblocked · unclaimed" dot={<StatusDot state="outline" color="var(--accent)" size={9} />}>
+        <Column title="Frontier" count={frontier.length} hint="unblocked · unclaimed" dot={<StatusDot state="outline" color="var(--bg-accent)" size={9} />}>
           {frontier.map((t) => (
             <Frontier key={t.id} t={t} />
           ))}
@@ -113,7 +113,7 @@ export function ProjectView({ id, mode }: { id: string; mode: 'map' | 'board' })
             </div>
           )}
         </Column>
-        <Column title="Blocked" count={blocked.length} hint="behind the fog" dim dot={<StatusDot state="dashed" color="var(--text-3)" size={9} />}>
+        <Column title="Blocked" count={blocked.length} hint="behind the fog" dim dot={<StatusDot state="dashed" color="var(--text-muted)" size={9} />}>
           {blocked.map((t) => {
             const kind = ticketKind(t);
             return (
@@ -139,7 +139,7 @@ export function ProjectView({ id, mode }: { id: string; mode: 'map' | 'board' })
           })}
           {blocked.length === 0 && <div className="pm-empty-inline">No blocked tickets.</div>}
         </Column>
-        <Column title="Resolved" count={resolved.length} dim narrow dot={<StatusDot state="solid" color="var(--accent)" size={9} />}>
+        <Column title="Resolved" count={resolved.length} dim narrow dot={<StatusDot state="solid" color="var(--bg-accent)" size={9} />}>
           {resolved.slice(0, 8).map((t) => {
             const last = (t.comments || []).at(-1);
             return (
