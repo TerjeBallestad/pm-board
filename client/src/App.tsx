@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ListRow, SectionLabel, Toast, ToastStack } from '@terjeballestad/bob';
+import { useEffect, useState } from 'react';
+import { ListRow, SectionLabel } from '@terjeballestad/bob';
 import { api, type BoardSummary } from './api';
 import { BoardProvider } from './BoardContext';
 import { Detail } from './components/Detail';
 import { Rail, Sidebar, Topbar, VIEWS, type ViewName } from './components/Frame';
 import { QuickOpen } from './components/QuickOpen';
 import { navigate, useLocation } from './router';
+import { notify } from './toast';
 import { useBoard, useTermIndex } from './useBoard';
 import { ProjectView } from './views/Project';
 import { ArchiveView, DecisionsView, DocumentsView, GlossaryView, InboxView, PlansView, TicketsView } from './views/Lists';
@@ -79,12 +80,6 @@ function BoardPage({
   const state = useBoard(slug);
   const terms = useTermIndex(state.status === 'ready' ? state.board.items : undefined);
   const [quickOpen, setQuickOpen] = useState(false);
-  const [toasts, setToasts] = useState<{ id: number; text: string; error?: boolean }[]>([]);
-  const toast = useCallback((text: string, error?: boolean) => {
-    const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, error }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000);
-  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -141,7 +136,7 @@ function BoardPage({
   const withRail = view !== 'decisions' && view !== 'documents';
 
   return (
-    <BoardProvider board={state.board} terms={terms} live={state.live} toast={toast}>
+    <BoardProvider board={state.board} terms={terms} live={state.live} toast={notify}>
       <div className={`pm-app${withRail ? '' : ' pm-no-rail'}`}>
         <Sidebar view={view} projectId={projectId} onQuickOpen={() => setQuickOpen(true)} />
         <main className="pm-main">
@@ -152,13 +147,6 @@ function BoardPage({
       </div>
       {openId && <Detail id={openId} />}
       {quickOpen && <QuickOpen onClose={() => setQuickOpen(false)} />}
-      <ToastStack>
-        {toasts.map((t) => (
-          <Toast key={t.id} error={t.error}>
-            {t.text}
-          </Toast>
-        ))}
-      </ToastStack>
     </BoardProvider>
   );
 }

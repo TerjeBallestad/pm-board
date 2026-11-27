@@ -109,8 +109,31 @@ test('Start copies the configured command', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto(`${B}/tickets?open=SB-001`);
   await page.getByRole('button', { name: '⧉ Start' }).click();
-  await expect(page.getByText('Copied: /work SB-001')).toBeVisible();
+  // Bob 1.0's toast (DD-036) is a dialog named by its title, in the Notifications region.
+  const notifications = page.getByRole('region', { name: 'Notifications' });
+  const copied = notifications.getByRole('dialog', { name: 'Copied: /work SB-001' });
+  await expect(copied).toBeVisible();
+  await expect(copied).not.toHaveClass(/\btoast-error\b/);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('/work SB-001');
+  // A success closes after the stack's 3-second timeout.
+  await page.mouse.move(0, 0);
+  await expect(copied).toHaveCount(0, { timeout: 6_000 });
+});
+
+test('a failed copy shows an error toast that stays until closed', async ({ page }) => {
+  await page.addInitScript(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new Error('denied'));
+  });
+  await page.goto(`${B}/tickets?open=SB-001`);
+  await page.getByRole('button', { name: '⧉ Start' }).click();
+  const failed = page.getByRole('dialog', { name: 'Could not copy to the clipboard' });
+  await expect(failed).toBeVisible();
+  await expect(failed).toHaveClass(/\btoast-error\b/);
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(4_000);
+  await expect(failed).toBeVisible();
+  await failed.getByRole('button', { name: /close/i }).click();
+  await expect(failed).toHaveCount(0);
 });
 
 test("Bob's component classes come from the app's Tailwind build and win over its element rules", async ({ page }) => {
