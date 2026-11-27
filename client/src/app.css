@@ -1,7 +1,4 @@
 /* pm board dashboard. Every colour, size and font is a Bob token (TOKENS.md in @terjeballestad/bob). */
-/* TODO(bob-1): the colour names below are Bob 1.0's (DD-033). package.json still pins Bob 0.3.0,
-   which does not define them. Bump @terjeballestad/bob to 1.0.0 once it is published, before this
-   branch merges. */
 
 /* Tailwind without its preflight: this CSS was written against Bob's reset alone (Bob's base.css),
    as Bob's Storybook is. Bob's component classes come from the last import (DD-031). */

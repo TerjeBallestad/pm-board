@@ -9,7 +9,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@terjeballestad/bob": "0.3.0",
+    "@terjeballestad/bob": "1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
