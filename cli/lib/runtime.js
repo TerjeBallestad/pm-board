@@ -46,7 +46,8 @@ export const flags = parsed.flags;
 const serverFlagUrl = flags.server && flags.server !== 'true' ? flags.server : null;
 export const BASE_URL = String(serverFlagUrl || process.env.PM_URL || userConfig.url || DEFAULT_URL).replace(/\/+$/, '');
 const TOKEN = process.env.PM_TOKEN || userConfig.token || null;
-export const BOARD = flags.board && flags.board !== 'true' ? flags.board : readJson(findBoardFile())?.board || null;
+const boardFromFlag = Boolean(flags.board && flags.board !== 'true');
+export const BOARD = boardFromFlag ? flags.board : readJson(findBoardFile())?.board || null;
 
 // The board's config (name, stages, entityTypes, commands, knowledgeBase) comes from the server,
 // where 0.x read pm.config.json. loadConfig() fills it once per command.
@@ -118,15 +119,21 @@ export async function apiResponse(method, path, body, { silent = false } = {}) {
 // The server names the board's slug in this header when a request named an old slug (DD-035).
 export const ALIAS_HEADER = 'x-pm-board';
 let hinted = null;
+let muted = false;
+
+/** A command that prints its own hint (pm board-rename) turns off the one from each answer. */
+export function muteAliasHint() { muted = true; }
 
 /**
- * One line on stderr: the board has a new slug, and .pm.json should name it. Once per command:
- * a command that makes several requests prints it again only for a slug it has not named.
+ * One line on stderr: the board has a new slug, and .pm.json (or --board) should name it. Once per
+ * command: a command that makes several requests prints it again only for a slug it has not named.
+ * `own` is the hint a command prints itself, which a mute does not stop.
  */
-export function aliasHint(slug) {
-  if (!slug || slug === hinted) return;
+export function aliasHint(slug, { own = false } = {}) {
+  if (!slug || slug === hinted || (muted && !own)) return;
   hinted = slug;
-  process.stderr.write(`pm: board ${BOARD} is now ${slug}. Update ${BOARD_FILENAME} to {"board": "${slug}"}.\n`);
+  const fix = boardFromFlag ? `Use --board ${slug}` : `Update ${BOARD_FILENAME} to {"board": "${slug}"}`;
+  process.stderr.write(`pm: board ${BOARD} is now ${slug}. ${fix}.\n`);
 }
 
 export function httpJson(method, url, body) {

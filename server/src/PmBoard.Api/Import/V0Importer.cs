@@ -38,15 +38,6 @@ public class V0Importer(BoardDb db)
 
         var p = dump["board"] ?? throw new ImportException("the dump has no board");
         var slug = (string?)p["slug"] ?? throw new ImportException("the dump's board has no slug");
-        if (await db.Boards.AnyAsync(x => x.Slug == slug, ct))
-        {
-            throw new ImportException($"board {slug} already exists; nothing was imported");
-        }
-        if (await db.BoardAliases.AnyAsync(x => x.Slug == slug, ct))
-        {
-            // An alias is never a second board (DD-035).
-            throw new ImportException($"{slug} is an old slug of a renamed board; nothing was imported");
-        }
 
         var board = new Board
         {
@@ -137,6 +128,16 @@ public class V0Importer(BoardDb db)
         FindDanglingReferences();
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // The slug is checked under the lock that create and rename hold (DD-035).
+        await Boards.BoardAliases.LockSlugs(db, ct);
+        switch (await Boards.BoardAliases.Holder(db, slug, null, ct))
+        {
+            case { IsAlias: false }:
+                throw new ImportException($"board {slug} already exists; nothing was imported");
+            case { Board: var owner }:
+                // An alias is never a second board.
+                throw new ImportException($"{slug} is an old slug of board {owner}; nothing was imported");
+        }
         db.Add(board);
         db.AddRange(_records);
         db.AddRange(_comments);

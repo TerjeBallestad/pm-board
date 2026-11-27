@@ -2,7 +2,7 @@
 // pm 1.x: the pm commands, over HTTP to one server that holds every repo's board (DD-004,
 // DD-021). lib/commands.js holds every command once; this file finds the command, checks its
 // flags and runs it (DD-023, DD-025).
-import { subcmd, positional, flags, VERSION, BOARD, usageError, requireBoard, loadConfig, loadConfigForHelp } from '../lib/runtime.js';
+import { subcmd, positional, flags, VERSION, BOARD, usageError, requireBoard, loadConfig, loadConfigForHelp, muteAliasHint } from '../lib/runtime.js';
 import { COMMANDS, GROUPS } from '../lib/commands.js';
 import { renderUsage, renderCommandHelp, closest, GUESSES, FLAG_GUESSES } from '../lib/help.js';
 
@@ -67,6 +67,7 @@ async function main() {
     return;
   }
   checkFlags(command);
+  if (command.ownAliasHint) muteAliasHint();
   if (command.board !== false) {
     requireBoard();
     await loadConfig();

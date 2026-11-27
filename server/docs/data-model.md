@@ -139,12 +139,18 @@ Users and tokens are not per board: a token writes to every board (DD-003, DD-02
   aliases removes that alias. A new board, or an import, cannot take an alias. Keys, bodies and
   links inside the board do not change.
 - **An alias resolves in one place** (`Boards/BoardAliases.cs`), a middleware before routing. A path
-  under `/api/boards/<alias>` is rewritten to the board's slug, so every read and write route acts on
-  the board, and the answer has `X-Pm-Board: <slug>`. A GET of a dashboard path `/<alias>/...` is a
-  302 to `/<slug>/...`. `/api/boards` lists boards only. `pm` prints one hint line on stderr when
-  an answer has the header. Every write that takes a slug holds one advisory lock, because no
-  unique index spans `boards.slug` and `board_aliases.slug`. The export writes no aliases: 0.x has
-  none.
+  under `/api/boards/<alias>` (in any case) is rewritten to the board's slug, so every read and
+  write route acts on the board, and the answer has `X-Pm-Board: <slug>`. Every request under
+  `/api/boards/<slug>/` makes this one alias lookup, by primary key. A GET or HEAD of a dashboard
+  path `/<alias>/...` is a 302 to `/<slug>/...`, with the path escaped again and the query kept.
+  `/api/boards` lists boards only. `pm` prints one hint line on stderr when an answer has the
+  header.
+- **One advisory lock guards every slug.** No unique index spans `boards.slug` and
+  `board_aliases.slug`, so create, rename and import take `pg_advisory_xact_lock` in their
+  transaction and check the slug after it. Without it, two writes for one slug both see it free,
+  and the loser fails on the unique index with a 500.
+- **The export does not resolve aliases and writes none:** 0.x has no aliases. `export --board`
+  takes a board's slug, not an alias.
 - **Attachments are rows** (DD-018), and a board's own prompt templates are in `boards.config` as
   `templateFiles` (DD-017).
 

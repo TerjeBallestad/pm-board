@@ -53,13 +53,6 @@ public static partial class BoardWrites
 
     private const string SlugRule = "slug must be 1 to 63 lowercase letters, digits and dashes, start with a letter or digit, and not be api, attachments or assets";
 
-    /// <summary>
-    /// A board's slug and the aliases are in two tables, so no unique index keeps a slug in one
-    /// of them only. Every write that takes a slug holds this lock until it commits, so two such
-    /// writes take turns.
-    /// </summary>
-    private const long SlugLock = 0x706d_736c_7567; // "pmslug"
-
     public static void MapBoardWrites(this WebApplication app)
     {
         app.MapPost("/api/boards", Create);
@@ -68,20 +61,14 @@ public static partial class BoardWrites
 
     private static bool ValidSlug(string? slug) => slug is not null && SlugPattern().IsMatch(slug) && !Reserved.Contains(slug);
 
-    private static Task LockSlugs(BoardDb db) => db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({SlugLock})");
-
     /// <summary>Why <paramref name="slug"/> cannot be the slug of board <paramref name="self"/>, or null.</summary>
-    private static async Task<IResult?> Taken(BoardDb db, string slug, Guid? self)
-    {
-        if (await db.Boards.AnyAsync(b => b.Slug == slug && b.Id != self))
+    private static async Task<IResult?> Taken(BoardDb db, string slug, Guid? self) =>
+        await BoardAliases.Holder(db, slug, self) switch
         {
-            return Write.Error(409, $"board {slug} already exists");
-        }
-        var owner = await db.BoardAliases.Where(a => a.Slug == slug && a.BoardId != self)
-            .Join(db.Boards, a => a.BoardId, b => b.Id, (a, b) => b.Slug)
-            .SingleOrDefaultAsync();
-        return owner is null ? null : Write.Error(409, $"{slug} is an old slug of board {owner}, and it still leads there");
-    }
+            null => null,
+            { IsAlias: false } => Write.Error(409, $"board {slug} already exists"),
+            { Board: var owner } => Write.Error(409, $"{slug} is an old slug of board {owner}, and it still leads there"),
+        };
 
     private static async Task<JsonObject?> ReadObject(HttpRequest req)
     {
@@ -125,7 +112,7 @@ public static partial class BoardWrites
         }
 
         await using var tx = await db.Database.BeginTransactionAsync();
-        await LockSlugs(db);
+        await BoardAliases.LockSlugs(db);
         var board = await db.Boards.SingleOrDefaultAsync(b => b.Slug == slug);
         if (board is null) return ReadRoutes.NotFound();
 
@@ -168,7 +155,7 @@ public static partial class BoardWrites
         var name = body["name"] is JsonValue n && n.GetValueKind() == JsonValueKind.String && ((string)n!).Trim() is { Length: > 0 } t ? t : slug!;
 
         await using var tx = await db.Database.BeginTransactionAsync();
-        await LockSlugs(db);
+        await BoardAliases.LockSlugs(db);
         // An alias is never a second board (DD-035).
         if (await Taken(db, slug!, null) is { } taken) return taken;
         var board = new Board

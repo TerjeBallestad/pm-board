@@ -221,4 +221,71 @@ public class BoardRenameTests(BoardFactory factory) : IClassFixture<BoardFactory
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Equal(BoardFactory.IndexHtml, await page.Content.ReadAsStringAsync());
     }
+
+    [Theory]
+    [InlineData("/items/%C3%A6")]
+    [InlineData("/items/a%3Fb")]
+    [InlineData("/items/a%20b")]
+    [InlineData("/items/a%0Db")]
+    public async Task The_redirect_keeps_an_escaped_path_escaped(string rest)
+    {
+        var (http, old) = await NewBoard();
+        var slug = NewSlug();
+        await Rename(http, old, new { slug });
+        var browser = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var res = await browser.GetAsync($"/{old}{rest}?q=1");
+        Assert.Equal(HttpStatusCode.Found, res.StatusCode);
+        Assert.Equal($"/{slug}{rest}?q=1", res.Headers.Location!.OriginalString);
+    }
+
+    [Fact]
+    public async Task A_HEAD_of_the_dashboard_at_an_old_slug_redirects_too()
+    {
+        var (http, old) = await NewBoard();
+        var slug = NewSlug();
+        await Rename(http, old, new { slug });
+        var browser = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var res = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Head, $"/{old}/tickets"));
+        Assert.Equal(HttpStatusCode.Found, res.StatusCode);
+        Assert.Equal($"/{slug}/tickets", res.Headers.Location!.OriginalString);
+    }
+
+    [Fact]
+    public async Task An_api_path_in_another_case_resolves_an_alias_as_it_resolves_a_slug()
+    {
+        var (http, old) = await NewBoard();
+        var slug = NewSlug();
+        await Rename(http, old, new { slug });
+
+        Assert.Equal(HttpStatusCode.OK, (await http.GetAsync($"/api/Boards/{slug}/config")).StatusCode);
+        var res = await http.GetAsync($"/API/Boards/{old}/config");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Equal(slug, Header(res));
+    }
+
+    [Fact]
+    public async Task Of_parallel_renames_and_a_create_that_want_one_slug_exactly_one_wins_and_the_rest_are_409()
+    {
+        // Without the slug lock, a loser checks before the winner commits, sees the slug free, and
+        // then fails on the unique index of boards.slug: a 500, not a 409. One race is often won
+        // cleanly by chance, so the test runs several.
+        for (var round = 0; round < 10; round++)
+        {
+            var boards = new List<(HttpClient Http, string Slug)>();
+            for (var i = 0; i < 8; i++) boards.Add(await NewBoard());
+            var wanted = NewSlug();
+            var http = boards[0].Http;
+
+            var renames = boards.Select(b => b.Http.PatchAsJsonAsync($"/api/boards/{b.Slug}", new { slug = wanted }));
+            var create = http.PostAsJsonAsync("/api/boards", new { slug = wanted });
+            var codes = (await Task.WhenAll(renames.Append(create))).Select(r => (int)r.StatusCode).ToList();
+
+            Assert.Equal(1, codes.Count(c => c is 200 or 201));
+            Assert.All(codes.Where(c => c is not (200 or 201)), c => Assert.Equal(409, c));
+            var holders = (await http.GetFromJsonAsync<JsonArray>("/api/boards"))!.Count(b => (string)b!["slug"]! == wanted);
+            Assert.Equal(1, holders);
+        }
+    }
 }

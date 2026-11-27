@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { appendPromptKnowledge } from './knowledge-base.js';
 import {
   api, httpJson, flags, positional, state, usageError, hasRequestFlags, isRequestFlag, loadConfig,
-  runKnowledgeQuery, aliasHint, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
+  runKnowledgeQuery, aliasHint, muteAliasHint, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
 } from './runtime.js';
 import {
   printList, fetchTerms, printGlossary, printTerm, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary,
@@ -668,12 +668,14 @@ const init = {
 // A rename is rare (DD-035), so the help leaves it out (DD-028).
 const boardRename = {
   name: 'board-rename', write: true, group: 'Setup', hidden: true,
-  synopsis: 'board-rename <new-slug> [--name N]', usage: 'board-rename [<new-slug>] [--name "Board name"]',
+  synopsis: 'board-rename [<new-slug>] [--name N]', usage: 'board-rename [<new-slug>] [--name "Board name"]',
   summary: 'Give this board a new slug, a new name or both; the old slug still works',
   help: 'Renames the board that .pm.json (or --board) names. The old slug stays an alias: reads,\nwrites and the dashboard at /<old-slug> still reach the board, and pm prints a hint to update\n.pm.json. Keys, bodies and links inside the board do not change. A slug that another board\nhas, as its slug or an old slug, is refused.',
   flags: ['name'],
   flagHelp: [['--name N', 'The board\'s new name']],
   examples: ['pm board-rename makron --name Makron', 'pm board-rename --name "Makron"'],
+  // Its own hint names the slug after the rename; the hint from the config read would name the one before.
+  ownAliasHint: true,
   async run() {
     const body = {};
     if (positional[0]) body.slug = positional[0];
@@ -686,7 +688,7 @@ const boardRename = {
     }
     const answer = await api('PATCH', `/api/boards/${encodeURIComponent(BOARD)}`, body, { silent: true });
     printWrite(answer, `updated board ${BOARD}: ${changes(body, answer)}`);
-    if (answer?.slug && answer.slug !== BOARD) aliasHint(answer.slug);
+    if (answer?.slug && answer.slug !== BOARD) aliasHint(answer.slug, { own: true });
   },
 };
 

@@ -5,12 +5,13 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const PM = fileURLToPath(new URL('../bin/pm', import.meta.url));
-const HINT = 'pm: board time-turtle is now makron. Update .pm.json to {"board": "makron"}.\n';
+// pm in these tests names the board with --board, so the hint says to change that.
+const HINT = 'pm: board time-turtle is now makron. Use --board makron.\n';
 const item = { id: 'SB-001', type: 'issue', title: 'A', stage: 'inbox' };
 const requests = [];
 let server, url;
@@ -43,12 +44,20 @@ before(async () => {
 });
 after(() => server.close());
 
-function pm(board, ...args) {
+function run(args, cwd) {
   const env = { ...process.env, PM_URL: url, PM_TOKEN: 'test', XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'pm-test-')) };
   return new Promise(resolve => {
-    execFile(process.execPath, [PM, ...args, '--board', board], { env }, (err, stdout, stderr) =>
+    execFile(process.execPath, [PM, ...args], { env, cwd }, (err, stdout, stderr) =>
       resolve({ code: err ? err.code : 0, stdout, stderr }));
   });
+}
+const pm = (board, ...args) => run([...args, '--board', board]);
+
+/** pm in a folder whose .pm.json names <board>. */
+function pmIn(board, ...args) {
+  const dir = mkdtempSync(join(tmpdir(), 'pm-repo-'));
+  writeFileSync(join(dir, '.pm.json'), JSON.stringify({ board }));
+  return run(args, dir);
 }
 
 test('a read through an old slug prints the same stdout, and one hint line on stderr', async () => {
@@ -60,6 +69,19 @@ test('a read through an old slug prints the same stdout, and one hint line on st
   // Two requests (config, then the item) carry the header; the hint is printed once.
   assert.equal(viaOld.stderr.split('\n').filter(l => l.startsWith('pm: board')).join('\n') + '\n', HINT);
   assert.doesNotMatch(viaNew.stderr, /is now/);
+});
+
+test('with .pm.json naming the old slug, the hint says to update .pm.json', async () => {
+  const { code, stderr } = await pmIn('time-turtle', 'get', 'SB-001');
+  assert.equal(code, 0, stderr);
+  assert.match(stderr, /^pm: board time-turtle is now makron\. Update \.pm\.json to \{"board": "makron"\}\.\n/);
+});
+
+test('pm board-rename through an old slug prints one hint, with the slug after the rename', async () => {
+  const { code, stdout, stderr } = await pmIn('time-turtle', 'board-rename', 'mk');
+  assert.equal(code, 0, stderr);
+  assert.equal(stdout, 'updated board time-turtle: slug mk\n');
+  assert.equal(stderr, 'pm: board time-turtle is now mk. Update .pm.json to {"board": "mk"}.\n');
 });
 
 test('pm board-rename sends slug and name to the board, prints one line, and the hint', async () => {
