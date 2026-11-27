@@ -58,8 +58,11 @@ if (args is ["token", .. var tokenArgs])
     return;
 }
 
+// Before routing: a path that names a board's old slug is rewritten or redirected (DD-035).
+app.UseBoardAliases();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 

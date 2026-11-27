@@ -90,6 +90,23 @@ public class ImportTests(BoardFactory factory) : IClassFixture<BoardFactory>
     }
 
     [Fact]
+    public async Task A_dump_whose_slug_is_an_alias_is_refused_and_nothing_is_imported()
+    {
+        var old = Slug();
+        await Import(old);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BoardDb>();
+        var board = await db.Boards.SingleAsync(p => p.Slug == old);
+        db.BoardAliases.Add(new BoardAlias { Slug = old, BoardId = board.Id });
+        board.Slug = Slug();
+        await db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<ImportException>(() => new V0Importer(db).ImportAsync(Dump(old)));
+        Assert.Equal($"{old} is an old slug of a renamed board; nothing was imported", ex.Message);
+        Assert.False(await db.Boards.AnyAsync(p => p.Slug == old));
+    }
+
+    [Fact]
     public async Task A_time_that_does_not_parse_stays_in_fields_and_is_reported()
     {
         var (report, records, _, _) = await Import(Slug());

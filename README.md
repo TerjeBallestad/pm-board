@@ -129,6 +129,10 @@ and never writes into a folder that exists.
 - `/api/health`: `{"ok": true}` when Postgres answers, 503 when it does not.
 - `/api/boards`: every board, `{slug, name}`. POST `{slug, name}` creates an empty board with
   0.x's default config, for `pm init` (201, or 409 when the slug is taken; DD-021).
+- `PATCH /api/boards/{slug}` `{slug, name}` (either or both): renames a board, for
+  `pm board-rename` (DD-035). The old slug stays an alias: every `/api/boards/<alias>/...` route
+  acts on the board and answers with `X-Pm-Board: <slug>`, and the dashboard at `/<alias>` redirects
+  to `/<slug>`. A slug another board has, as its slug or an alias, is 409.
 - `/api/boards/{slug}/...`: 0.x's read routes for that board, with the same JSON and filters:
   `config` (with `knowledgeBase` for the CLI), `items` (`type`, `stage`, `priority`, `sprintId`, `frontier`, `allClaims`),
   `items/archived`, `items/{id}`, `designs`, `designs/{id}`, `plans`, `plans/{id}`, `sprints`,

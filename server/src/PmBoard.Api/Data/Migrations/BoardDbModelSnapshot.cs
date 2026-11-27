@@ -107,6 +107,31 @@ namespace PmBoard.Api.Data.Migrations
                     b.ToTable("boards", (string)null);
                 });
 
+            modelBuilder.Entity("PmBoard.Api.Data.BoardAlias", b =>
+                {
+                    b.Property<string>("Slug")
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("board_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Slug")
+                        .HasName("pk_board_aliases");
+
+                    b.HasIndex("BoardId")
+                        .HasDatabaseName("ix_board_aliases_board_id");
+
+                    b.ToTable("board_aliases", (string)null);
+                });
+
             modelBuilder.Entity("PmBoard.Api.Data.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -398,6 +423,16 @@ namespace PmBoard.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_attachments_boards_board_id");
+                });
+
+            modelBuilder.Entity("PmBoard.Api.Data.BoardAlias", b =>
+                {
+                    b.HasOne("PmBoard.Api.Data.Board", null)
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_board_aliases_boards_board_id");
                 });
 
             modelBuilder.Entity("PmBoard.Api.Data.Comment", b =>

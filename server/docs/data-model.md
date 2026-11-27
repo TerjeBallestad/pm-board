@@ -12,6 +12,7 @@ erDiagram
   boards ||--o{ id_counters : "numbers keys"
   boards ||--o{ records : holds
   boards ||--o{ attachments : has
+  boards ||--o{ board_aliases : "old slugs"
   records ||--o{ records : "plan has tasks"
   records ||--o{ comments : has
   users ||--o{ tokens : has
@@ -21,6 +22,11 @@ erDiagram
     text slug UK "the URL part: /pm-board-cli"
     text name
     jsonb config "stages, entityTypes, templates, commands, knowledgeBase, frontend"
+    timestamptz created_at
+  }
+  board_aliases {
+    text slug PK "an old slug: time-turtle"
+    uuid board_id FK
     timestamptz created_at
   }
   id_counters {
@@ -126,6 +132,19 @@ Users and tokens are not per board: a token writes to every board (DD-003, DD-02
 - **Only a token's hash is stored.** A token is `pmb_` and 32 random bytes, so SHA-256 is enough:
   it is not a password. A revoked token keeps its row, for `token list`. A user's tokens that are
   not revoked have different names (a unique index with `WHERE revoked_at IS NULL`).
+- **A board can be renamed, and its old slug stays an alias (DD-035).** `PATCH /api/boards/{slug}`
+  takes `slug`, `name` or both, with a token; any other field is 400 (DD-016). The new slug follows
+  the rules of `POST /api/boards`. A new slug moves the old one to `board_aliases`. A slug that
+  another board has, as its slug or an alias, is 409. A rename back to one of the board's own
+  aliases removes that alias. A new board, or an import, cannot take an alias. Keys, bodies and
+  links inside the board do not change.
+- **An alias resolves in one place** (`Boards/BoardAliases.cs`), a middleware before routing. A path
+  under `/api/boards/<alias>` is rewritten to the board's slug, so every read and write route acts on
+  the board, and the answer has `X-Pm-Board: <slug>`. A GET of a dashboard path `/<alias>/...` is a
+  302 to `/<slug>/...`. `/api/boards` lists boards only. `pm` prints one hint line on stderr when
+  an answer has the header. Every write that takes a slug holds one advisory lock, because no
+  unique index spans `boards.slug` and `board_aliases.slug`. The export writes no aliases: 0.x has
+  none.
 - **Attachments are rows** (DD-018), and a board's own prompt templates are in `boards.config` as
   `templateFiles` (DD-017).
 

@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { appendPromptKnowledge } from './knowledge-base.js';
 import {
   api, httpJson, flags, positional, state, usageError, hasRequestFlags, isRequestFlag, loadConfig,
-  runKnowledgeQuery, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
+  runKnowledgeQuery, aliasHint, BASE_URL, BOARD, BOARD_FILENAME, USER_CONFIG_PATH, PACKAGE_DIR, VERSION
 } from './runtime.js';
 import {
   printList, fetchTerms, printGlossary, printTerm, printGlossaryFooter, printSprintOverview, printPlanOverview, nextTaskSummary,
@@ -665,6 +665,31 @@ const init = {
   },
 };
 
+// A rename is rare (DD-035), so the help leaves it out (DD-028).
+const boardRename = {
+  name: 'board-rename', write: true, group: 'Setup', hidden: true,
+  synopsis: 'board-rename <new-slug> [--name N]', usage: 'board-rename [<new-slug>] [--name "Board name"]',
+  summary: 'Give this board a new slug, a new name or both; the old slug still works',
+  help: 'Renames the board that .pm.json (or --board) names. The old slug stays an alias: reads,\nwrites and the dashboard at /<old-slug> still reach the board, and pm prints a hint to update\n.pm.json. Keys, bodies and links inside the board do not change. A slug that another board\nhas, as its slug or an old slug, is refused.',
+  flags: ['name'],
+  flagHelp: [['--name N', 'The board\'s new name']],
+  examples: ['pm board-rename makron --name Makron', 'pm board-rename --name "Makron"'],
+  async run() {
+    const body = {};
+    if (positional[0]) body.slug = positional[0];
+    if (flags.name !== undefined) {
+      if (flags.name === 'true') usageError('--name needs a value: pm board-rename --name "Board name"');
+      body.name = flags.name;
+    }
+    if (positional.length > 1 || !Object.keys(body).length) {
+      usageError('Usage: pm board-rename [<new-slug>] [--name "Board name"]\nGive a new slug, a new name or both.');
+    }
+    const answer = await api('PATCH', `/api/boards/${encodeURIComponent(BOARD)}`, body, { silent: true });
+    printWrite(answer, `updated board ${BOARD}: ${changes(body, answer)}`);
+    if (answer?.slug && answer.slug !== BOARD) aliasHint(answer.slug);
+  },
+};
+
 const update = {
   name: 'update', group: 'Setup', board: false, anyFlags: true, // its own check, below
   synopsis: 'update', usage: 'update',
@@ -730,7 +755,7 @@ export const COMMANDS = [
   removed('review', 'pm get <id> for the record, and pm list decision for the decisions to check it against'),
   removed('plan-update', 'pm patch PLAN-NNN --title T --stage S --tasks @file.json'),
   removed('sdds', 'pm list sdd'), removed('designs', 'pm list sdd'), removed('sprints', 'pm project list'),
-  init, update, health, gone('serve'), gone('start'), gone('stop'),
+  init, boardRename, update, health, gone('serve'), gone('start'), gone('stop'),
 ];
 
 /** The item types of this board, as list and create take them. */

@@ -30,6 +30,9 @@ git add .pm.json
 `.pm.json` names the board: `{"board": "my-repo"}`. `pm` finds it from any subfolder or worktree.
 `--board <slug>` uses another board for one command.
 
+`pm board-rename <new-slug> [--name N]` renames the board (DD-035; the help leaves it out). The
+old slug keeps working. While `.pm.json` names it, pm prints one line on stderr to update it.
+
 ## Use
 
 `pm help` lists the commands agents use, and `pm help <command>` gives one command's flags and

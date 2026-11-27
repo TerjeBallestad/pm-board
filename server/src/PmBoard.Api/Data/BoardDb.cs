@@ -6,6 +6,7 @@ namespace PmBoard.Api.Data;
 public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
 {
     public DbSet<Board> Boards => Set<Board>();
+    public DbSet<BoardAlias> BoardAliases => Set<BoardAlias>();
     public DbSet<IdCounter> IdCounters => Set<IdCounter>();
     public DbSet<Record> Records => Set<Record>();
     public DbSet<Comment> Comments => Set<Comment>();
@@ -20,6 +21,14 @@ public class BoardDb(DbContextOptions<BoardDb> options) : DbContext(options)
             e.HasIndex(p => p.Slug).IsUnique();
             e.Property(p => p.Config).HasColumnType("jsonb");
             e.Property(p => p.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<BoardAlias>(e =>
+        {
+            e.HasKey(a => a.Slug);
+            e.HasIndex(a => a.BoardId);
+            e.HasOne<Board>().WithMany().HasForeignKey(a => a.BoardId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(a => a.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<IdCounter>(e =>

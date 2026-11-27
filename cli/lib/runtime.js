@@ -79,8 +79,9 @@ export function hasRequestFlags() {
 }
 
 // 0.x's paths are /api/items, ...; 1.x has them per board under /api/boards/{slug}/items.
+// A path that is already under /api/boards (a rename of the board itself) stays as it is.
 export function boardPath(path) {
-  if (!path.startsWith('/api/')) return path;
+  if (!path.startsWith('/api/') || path.startsWith('/api/boards/')) return path;
   return `/api/boards/${encodeURIComponent(BOARD)}/${path.slice('/api/'.length)}`;
 }
 
@@ -114,6 +115,20 @@ export async function apiResponse(method, path, body, { silent = false } = {}) {
   return { data, headers };
 }
 
+// The server names the board's slug in this header when a request named an old slug (DD-035).
+export const ALIAS_HEADER = 'x-pm-board';
+let hinted = null;
+
+/**
+ * One line on stderr: the board has a new slug, and .pm.json should name it. Once per command:
+ * a command that makes several requests prints it again only for a slug it has not named.
+ */
+export function aliasHint(slug) {
+  if (!slug || slug === hinted) return;
+  hinted = slug;
+  process.stderr.write(`pm: board ${BOARD} is now ${slug}. Update ${BOARD_FILENAME} to {"board": "${slug}"}.\n`);
+}
+
 export function httpJson(method, url, body) {
   return new Promise((resolveRequest, rejectRequest) => {
     const target = new URL(url);
@@ -140,6 +155,7 @@ export function httpJson(method, url, body) {
           try { data = JSON.parse(raw); }
           catch { data = raw; }
         }
+        aliasHint(res.headers[ALIAS_HEADER]);
         resolveRequest({ status: res.statusCode || 0, data, headers: res.headers });
       });
     });

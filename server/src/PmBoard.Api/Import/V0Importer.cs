@@ -42,6 +42,11 @@ public class V0Importer(BoardDb db)
         {
             throw new ImportException($"board {slug} already exists; nothing was imported");
         }
+        if (await db.BoardAliases.AnyAsync(x => x.Slug == slug, ct))
+        {
+            // An alias is never a second board (DD-035).
+            throw new ImportException($"{slug} is an old slug of a renamed board; nothing was imported");
+        }
 
         var board = new Board
         {
