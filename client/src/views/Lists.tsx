@@ -120,7 +120,7 @@ export function TicketsView({ projectId }: { projectId?: string }) {
         return (
           <section key={stage} className="pm-column">
             <div className="pm-column-head">
-              <StatusDot state={stage === 'inbox' ? 'dashed' : stage === 'done' ? 'solid' : 'outline'} color={stage === 'done' ? 'var(--bg-green)' : 'var(--text-muted)'} size={8} />
+              <StatusDot state={stage === 'inbox' ? 'dashed' : stage === 'done' ? 'solid' : 'outline'} color={stage === 'done' ? 'var(--bg-green)' : 'var(--gray-23)'} size={8} />
               <span className="pm-column-title">{stage.charAt(0).toUpperCase() + stage.slice(1)}</span>
               <span className="pm-column-count">{cards.length}</span>
             </div>
@@ -225,7 +225,7 @@ export function PlansView() {
       {active.length ? sorted(active).map(row) : <div className="pm-empty-inline">Nothing executing.</div>}
       {done.length > 0 && (
         <>
-          <SectionLabel dot={<StatusDot state="solid" color="var(--text-faint)" size={7} square />} action={<span className="pm-count">{done.length}</span>} style={{ marginTop: 18 }}>
+          <SectionLabel dot={<StatusDot state="solid" color="var(--gray-22)" size={7} square />} action={<span className="pm-count">{done.length}</span>} style={{ marginTop: 18 }}>
             Done
           </SectionLabel>
           {sorted(done).map(row)}

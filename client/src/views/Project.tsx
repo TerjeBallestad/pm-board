@@ -113,7 +113,7 @@ export function ProjectView({ id, mode }: { id: string; mode: 'map' | 'board' })
             </div>
           )}
         </Column>
-        <Column title="Blocked" count={blocked.length} hint="behind the fog" dim dot={<StatusDot state="dashed" color="var(--text-muted)" size={9} />}>
+        <Column title="Blocked" count={blocked.length} hint="behind the fog" dim dot={<StatusDot state="dashed" color="var(--gray-23)" size={9} />}>
           {blocked.map((t) => {
             const kind = ticketKind(t);
             return (
