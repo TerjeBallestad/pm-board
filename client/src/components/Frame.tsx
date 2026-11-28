@@ -14,6 +14,7 @@ import {
   refColor,
   ticketKind,
 } from '../model';
+import { cx, emptyInline, hoverRow, monoDim, plainButton } from '../classes';
 import { navigate } from '../router';
 import { relativeTime } from '../time';
 
@@ -43,21 +44,21 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
   const open = board.items.filter((i) => isTicket(i, board.config) && !isResolvedStage(i.stage));
 
   return (
-    <aside className="pm-sidebar">
-      <div className="pm-brand">
-        <button className="pm-boards-link" onClick={() => navigate('/')} title="All boards">
-          <span className="pm-logo" />
-          <span className="pm-brand-name">{board.config.name || board.slug}</span>
+    <aside className="pm-sidebar flex flex-col gap-0.5 overflow-y-auto border-r border-subtle bg-sidebar px-2.5 py-3.5">
+      <div className="flex items-center gap-2 px-1.5 pt-0.5 pb-2.5">
+        <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.25 border-0 bg-transparent p-0 text-left" onClick={() => navigate('/')} title="All boards">
+          <span className="size-4.5 shrink-0 rounded-chip bg-linear-135/srgb from-indigo-9 to-purple-9" />
+          <span className="truncate text-heading">{board.config.name || board.slug}</span>
         </button>
         <span data-live={live} title={live ? 'Live: changes appear as they happen' : 'Not connected: reload to see changes'}>
           <StatusDot state={live ? 'live' : 'outline'} color={live ? 'var(--bg-green)' : 'var(--gray-22)'} size={7} />
         </span>
       </div>
-      <button className="pm-search-btn" onClick={onQuickOpen}>
+      <button className="mx-1 mb-3 flex cursor-pointer items-center justify-between rounded-md border border-input bg-input px-2.5 py-1.5 text-body text-muted" onClick={onQuickOpen}>
         <span>Search</span>
         <Kbd>⌘K</Kbd>
       </button>
-      <nav className="pm-nav">
+      <nav className="pm-nav flex flex-col gap-px">
         {VIEWS.map((v) => (
           <NavRow
             key={v.view}
@@ -69,8 +70,8 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
           />
         ))}
       </nav>
-      <SectionLabel style={{ marginTop: 14 }}>Projects</SectionLabel>
-      <div className="pm-projects">
+      <SectionLabel className="mt-3.5">Projects</SectionLabel>
+      <div className="pm-projects flex flex-col gap-px">
         {shown.map((p) => {
           const { resolved, total } = projectProgress(p);
           const active = view === 'project' && projectId === p.id;
@@ -79,9 +80,9 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
             <NavRow
               key={p.id}
               label={
-                <span className="pm-proj-label">
-                  <span className="pm-proj-name">{p.name}</span>
-                  <span className="pm-proj-progress">{done ? '✓' : `${resolved}/${total}`}</span>
+                <span className="flex w-full min-w-0 items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  <span className={cx(monoDim, 'shrink-0')}>{done ? '✓' : `${resolved}/${total}`}</span>
                 </span>
               }
               active={active}
@@ -91,11 +92,11 @@ export function Sidebar({ view, projectId, onQuickOpen }: { view: ViewName; proj
             />
           );
         })}
-        {projects.length > shown.length && <div className="pm-more">+ {projects.length - shown.length} more — ⌘K to jump</div>}
-        {projects.length === 0 && <div className="pm-more">No open projects.</div>}
+        {projects.length > shown.length && <div className="px-2.5 py-1 text-caption text-muted">+ {projects.length - shown.length} more — ⌘K to jump</div>}
+        {projects.length === 0 && <div className="px-2.5 py-1 text-caption text-muted">No open projects.</div>}
       </div>
-      <SectionLabel style={{ marginTop: 14 }}>Kinds</SectionLabel>
-      <div className="pm-kinds">
+      <SectionLabel className="mt-3.5">Kinds</SectionLabel>
+      <div className="flex flex-col gap-px">
         {KINDS.map((k) => (
           <NavRow
             key={k}
@@ -137,9 +138,9 @@ export function Topbar({
     const p = board.sprints.find((s) => s.id === projectId);
     left = (
       <>
-        <span className="pm-topbar-title">{p?.name || 'Project'}</span>
+        <span className="truncate text-heading">{p?.name || 'Project'}</span>
         {p && (
-          <button className="pm-doclink" onClick={() => open(p.id)}>
+          <button className="cursor-pointer border-0 bg-transparent font-mono text-caption text-accent" onClick={() => open(p.id)}>
             {p.id} ↗
           </button>
         )}
@@ -155,15 +156,15 @@ export function Topbar({
     };
     left = (
       <>
-        <span className="pm-topbar-title">{TITLES[view]}</span>
-        {sub[view] && <span className="pm-topbar-sub">{sub[view]}</span>}
+        <span className="truncate text-heading">{TITLES[view]}</span>
+        {sub[view] && <span className="pm-topbar-sub whitespace-nowrap text-body text-muted">{sub[view]}</span>}
       </>
     );
   }
   return (
-    <header className="pm-topbar">
+    <header className="pm-topbar flex h-(--topbar-h) shrink-0 items-center gap-3 border-b border-subtle px-4.5">
       {left}
-      <div className="pm-topbar-actions">
+      <div className="ml-auto flex items-center gap-2.5">
         {view === 'project' && projectId && (
           <SegToggle
             options={[
@@ -174,8 +175,8 @@ export function Topbar({
             onChange={(m) => navigate(`/${board.slug}/project/${projectId}${m === 'board' ? '?mode=board' : ''}`)}
           />
         )}
-        <SearchInput placeholder="Filter…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 200 }} />
-        <span className="pm-readonly" title="pm 1.x shows boards read-only until the write API (PLAN-001 Task 6). Use the pm CLI to change things.">
+        <SearchInput placeholder="Filter…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-50" />
+        <span className="pm-readonly cursor-help rounded-chip border border-dashed border-strong px-1.75 py-0.5 font-mono text-tiny text-muted" title="pm 1.x shows boards read-only until the write API (PLAN-001 Task 6). Use the pm CLI to change things.">
           read-only
         </span>
       </div>
@@ -188,31 +189,31 @@ export function Rail() {
   const needs = collectNeedsYou(board);
   const events = collectActivity(board);
   return (
-    <aside className="pm-rail">
+    <aside className="pm-rail overflow-y-auto border-l border-subtle bg-rail px-4 py-3.5">
       {needs.length > 0 && (
-        <div className="pm-needs">
-          <div className="pm-needs-title">Needs you · {needs.length}</div>
+        <div className="mb-4.5 rounded-lg border border-orange-9/35 bg-orange-9/6 px-3 pt-3 pb-2">
+          <div className="mb-1.5 text-label text-orange uppercase">Needs you · {needs.length}</div>
           {needs.map((n) => (
-            <button key={n.refId} className="pm-needs-row" onClick={() => open(n.refId)}>
-              {n.label} <span style={{ color: n.color }}>{n.refId}</span>
+            <button key={n.refId} className={cx(plainButton, 'block w-full py-1 text-body')} onClick={() => open(n.refId)}>
+              {n.label} <span className="font-mono text-id" style={{ color: n.color }}>{n.refId}</span>
             </button>
           ))}
         </div>
       )}
       <SectionLabel>Activity</SectionLabel>
-      <div className="pm-activity">
-        {events.length === 0 && <div className="pm-empty-inline">No activity yet.</div>}
+      <div className="mt-1.5 flex flex-col gap-1">
+        {events.length === 0 && <div className={emptyInline}>No activity yet.</div>}
         {events.map((ev, i) => {
           const av = authorAvatar(ev.author);
           return (
-            <button key={i} className="pm-act-row" onClick={() => open(ev.refId)}>
+            <button key={i} className={cx(plainButton, hoverRow, 'flex gap-2.25 px-1 py-1.75')} onClick={() => open(ev.refId)}>
               <Avatar initials={av.initial} tone={av.tone} size={18} />
-              <div className="pm-act-body">
-                <div className="pm-act-line">
-                  <strong>{ev.author}</strong> {ev.verb} <span style={{ color: refColor(board, ev.refId), fontFamily: 'var(--mono)' }}>{ev.refId}</span>
+              <div className="min-w-0">
+                <div className="text-caption text-secondary">
+                  <strong className="text-primary">{ev.author}</strong> {ev.verb} <span className="font-mono" style={{ color: refColor(board, ev.refId) }}>{ev.refId}</span>
                 </div>
-                <div className="pm-act-text">{ev.text}</div>
-                <div className="pm-act-when">{relativeTime(ev.when)}</div>
+                <div className="line-clamp-2 text-note text-muted">{ev.text}</div>
+                <div className="mt-0.5 font-mono text-tiny text-faint">{relativeTime(ev.when)}</div>
               </div>
             </button>
           );
