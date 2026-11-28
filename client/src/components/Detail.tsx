@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Avatar, Button, Chip, SectionLabel } from '@terjeballestad/bob';
 import type { Comment, Design, Item, Plan, Sprint, TestEntry } from '../api';
 import { useBoardCtx } from '../BoardContext';
 import {
@@ -21,8 +20,21 @@ import {
   unresolvedBlockers,
   type EntityKind,
 } from '../model';
+import { Avatar, Button, Chip, SectionLabel, StatusDot } from '@terjeballestad/bob';
+import { cardId, check, cx, dimText, emptyInline, files, hoverRow, monoDim, plainButton, section, waitChip } from '../classes';
 import { relativeTime } from '../time';
 import { Markdown } from './Markdown';
+
+const slideBody = 'pm-slide-body flex-1 overflow-y-auto px-8 pt-5.5 pb-10';
+const docTitle = 'mb-3.5 text-display';
+const chipsRow = 'mb-3 flex flex-wrap items-center gap-1.5';
+const chipsLabel = 'mr-0.5 text-caption text-muted';
+/** A task's status chip: its colours. */
+const TASK_STATUS: Record<string, string> = {
+  pending: 'bg-input text-secondary',
+  done: 'bg-green-tint text-green',
+  in_progress: 'bg-orange-tint text-orange',
+};
 
 /** The right slide-over for ?open=KEY. Read-only in 1.x until the write API exists. */
 export function Detail({ id }: { id: string }) {
@@ -34,13 +46,13 @@ export function Detail({ id }: { id: string }) {
   }, [close]);
   const found = findEntity(board, id);
   return (
-    <div className="pm-overlay" onClick={close}>
-      <div className="pm-slide" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={id}>
+    <div className="fixed inset-0 z-40 flex justify-end bg-scrim" onClick={close}>
+      <div className="pm-slide flex h-full w-[min(780px,100vw)] flex-col border-l border-strong bg-sidebar shadow-overlay" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={id}>
         {!found ? (
           <>
             <Header id={id} color={NEUTRAL} chip="Not found" />
-            <div className="pm-slide-body">
-              <p className="pm-dimtext">No record {id} on this board. It may be archived, or the key may be wrong.</p>
+            <div className={slideBody}>
+              <p className={dimText}>No record {id} on this board. It may be archived, or the key may be wrong.</p>
             </div>
           </>
         ) : found.kind === 'item' ? (
@@ -82,17 +94,17 @@ function Header({
     }
   };
   return (
-    <div className="pm-slide-header">
-      <span className="pm-slide-id" style={{ color }}>{id}</span>
-      <span className="pm-typechip" style={{ color, background: `${color}1f` }}>{chip}</span>
-      {sub && <span className="pm-dimtext">{sub}</span>}
-      <div className="pm-slide-actions">
+    <div className="flex flex-wrap items-center gap-2.5 border-b border-subtle px-6 py-3.25">
+      <span className="font-mono text-subhead" style={{ color }}>{id}</span>
+      <span className="rounded-chip px-2 py-0.5 text-id" style={{ color, background: `${color}1f` }}>{chip}</span>
+      {sub && <span className={dimText}>{sub}</span>}
+      <div className="ml-auto flex items-center gap-1.5">
         {cmd && (
           <Button size="sm" variant="primary" onClick={copy} title={cmd}>
             ⧉ Start
           </Button>
         )}
-        <button className="pm-close" onClick={close} aria-label="Close">
+        <button className="modal-close px-1" onClick={close} aria-label="Close">
           ×
         </button>
       </div>
@@ -102,10 +114,10 @@ function Header({
 
 function Meta({ items }: { items: [string, string | null | undefined][] }) {
   return (
-    <div className="pm-meta-row">
+    <div className="pm-meta-row mb-3.5 flex flex-wrap gap-2">
       {items.map(([label, value]) => (
-        <span key={label} className="pm-meta-item">
-          <span>{label}</span>
+        <span key={label} className="inline-flex items-center gap-2 rounded-md border border-strong bg-input px-2.5 py-1 text-body">
+          <span className="text-muted">{label}</span>
           <strong>{value || '--'}</strong>
         </span>
       ))}
@@ -118,13 +130,13 @@ function RefChips({ label, ids, done }: { label: string; ids: string[]; done?: (
   if (!ids.length) return null;
   const index = byId(board.items);
   return (
-    <div className="pm-chips-row">
-      <span className="pm-chips-label">{label}</span>
+    <div className={chipsRow}>
+      <span className={chipsLabel}>{label}</span>
       {ids.map((rid) => {
         const isDone = done?.(rid) ?? false;
         const c = kindColor(ticketKind(index.get(rid)));
         return (
-          <button key={rid} className="pm-waitchip" style={{ color: isDone ? 'var(--text-muted)' : c, background: isDone ? 'transparent' : `${c}14` }} onClick={() => open(rid)}>
+          <button key={rid} className={waitChip} style={{ color: isDone ? 'var(--text-muted)' : c, background: isDone ? 'transparent' : `${c}14` }} onClick={() => open(rid)}>
             {rid}
             {isDone ? ' ✓' : ''}
           </button>
@@ -136,18 +148,18 @@ function RefChips({ label, ids, done }: { label: string; ids: string[]; done?: (
 
 function Thread({ comments }: { comments: Comment[] }) {
   return (
-    <div className="pm-thread">
+    <div className="mt-6.5 border-t border-subtle pt-4">
       <SectionLabel>Thread{comments.length ? ` · ${comments.length}` : ''}</SectionLabel>
-      {comments.length === 0 && <div className="pm-empty-inline">No messages yet.</div>}
+      {comments.length === 0 && <div className={emptyInline}>No messages yet.</div>}
       {comments.map((c, i) => {
         const av = authorAvatar(c.author);
         return (
-          <div key={c.id || i} className="pm-comment">
+          <div key={c.id || i} className="flex gap-2.5 py-2.5">
             <Avatar initials={av.initial} tone={av.tone} size={20} />
-            <div className="pm-comment-main">
-              <div className="pm-comment-head">
-                <span className="pm-comment-author">{c.author || 'Unknown'}</span>
-                <span className="pm-dimtext">{relativeTime(c.createdAt)}</span>
+            <div className="min-w-0 flex-1">
+              <div className="mb-0.5 flex items-baseline gap-2.5">
+                <span className="text-subhead">{c.author || 'Unknown'}</span>
+                <span className={dimText}>{relativeTime(c.createdAt)}</span>
               </div>
               <Markdown text={c.text} />
             </div>
@@ -161,17 +173,17 @@ function Thread({ comments }: { comments: Comment[] }) {
 function Tests({ tests }: { tests?: TestEntry[] }) {
   const list = Array.isArray(tests) ? tests : [];
   return (
-    <div className="pm-section">
+    <div className={section}>
       <SectionLabel>Verified claims</SectionLabel>
-      {list.length === 0 && <div className="pm-empty-inline">(no claims yet — no tests guard this decision)</div>}
+      {list.length === 0 && <div className={emptyInline}>(no claims yet — no tests guard this decision)</div>}
       {list.map((t, i) => (
-        <div key={i} className="pm-test">
-          <div className="pm-test-head">
-            <span className="pm-test-name">{t.name}</span>
-            {t.file && <span className="pm-mono-dim">{t.file}</span>}
+        <div key={i} className="mt-1.5 rounded-md border border-subtle px-2.5 py-2">
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-subhead">{t.name}</span>
+            {t.file && <span className={monoDim}>{t.file}</span>}
           </div>
           {(t.claims || []).length > 0 && (
-            <ul className="pm-test-claims">
+            <ul className="mt-1.5 pl-4.5 text-body text-secondary">
               {(t.claims || []).map((c, j) => (
                 <li key={j}>{c.text || c.method}</li>
               ))}
@@ -195,26 +207,26 @@ function ItemDetail({ item }: { item: Item }) {
   return (
     <>
       <Header id={item.id} color={color} chip={chip} sub={`updated ${relativeTime(item.updatedAt)}`} start={{ entity: item, kind: 'item' }} />
-      <div className="pm-slide-body">
-        <h1 className="pm-doc-title">{item.title}</h1>
+      <div className={slideBody}>
+        <h1 className={docTitle}>{item.title}</h1>
         <Meta items={[['Stage', item.stage], ['Priority', item.priority], ['Project', sprint ? `${sprint.id} — ${sprint.name}` : null]]} />
         {item.assignee && (
-          <div className="pm-chips-row">
-            <span className="pm-chips-label">claimed</span>
+          <div className={chipsRow}>
+            <span className={chipsLabel}>claimed</span>
             <Chip mono tone="claim">
               ⚑ {item.assignee}
             </Chip>
-            <span className="pm-dimtext">{relativeTime(item.assignedAt)}</span>
+            <span className={dimText}>{relativeTime(item.assignedAt)}</span>
           </div>
         )}
         <RefChips label="waits on" ids={item.blockedBy || []} done={(b) => !index.get(b) || isResolvedStage(index.get(b)!.stage)} />
         <RefChips label="related" ids={item.related || []} />
-        {item.body ? <Markdown text={item.body} /> : <p className="pm-dimtext">No description</p>}
+        {item.body ? <Markdown text={item.body} /> : <p className={dimText}>No description</p>}
         {isDecision && <Tests tests={item.tests} />}
         {(item.affectedFiles || []).length > 0 && (
-          <div className="pm-section">
+          <div className={section}>
             <SectionLabel>Affected files</SectionLabel>
-            <ul className="pm-files">
+            <ul className={files}>
               {(item.affectedFiles || []).map((f) => (
                 <li key={f}>{f}</li>
               ))}
@@ -237,13 +249,13 @@ function DesignDetail({ d }: { d: Design }) {
   return (
     <>
       <Header id={d.id} color={DESIGN_COLOR} chip="Map" sub={`updated ${relativeTime(d.updatedAt)}`} start={{ entity: d, kind: 'design' }} />
-      <div className="pm-slide-body">
-        <h1 className="pm-doc-title">{d.title}</h1>
+      <div className={slideBody}>
+        <h1 className={docTitle}>{d.title}</h1>
         <Meta items={[['Stage', d.stage], ['Project', sprint ? `${sprint.id} — ${sprint.name}` : null]]} />
         {linked.length > 0 && (
           <>
-            <SectionLabel action={<span className="pm-count">{linked.length} · {resolved} resolved</span>}>Tickets</SectionLabel>
-            <div className="pm-map-tickets">
+            <SectionLabel action={<span className={monoDim}>{linked.length} · {resolved} resolved</span>}>Tickets</SectionLabel>
+            <div className="mt-1.5 mb-4.5 flex flex-col">
               {linked.map((t) => {
                 const kind = ticketKind(t);
                 const c = kindColor(kind);
@@ -251,19 +263,24 @@ function DesignDetail({ d }: { d: Design }) {
                 const hot = frontier.has(t.id);
                 const blockers = unresolvedBlockers(t, index);
                 return (
-                  <button key={t.id} className={`pm-mt-row${done ? ' pm-mt-done' : ''}`} style={hot ? { background: `${c}0a` } : undefined} onClick={() => open(t.id)}>
-                    {done ? <span className="pm-check">✓</span> : <span className={`pm-ring${hot ? '' : ' pm-ring-fog'}`} style={hot ? { borderColor: c } : undefined} />}
-                    <span className="pm-pcard-id" style={{ color: c }}>{t.id}</span>
-                    <span className="pm-mt-title">{displayTitle(t)}</span>
-                    {!done && hot && <span className="pm-frontier-tag" style={{ color: c }}>FRONTIER</span>}
-                    {!done && !hot && blockers.length > 0 && <span className="pm-mono-dim">⊘ {blockers.map((b) => b.replace(/^[A-Z]+-/, '')).join(' · ')}</span>}
+                  <button
+                    key={t.id}
+                    className={cx(plainButton, hoverRow, 'flex items-center gap-2.5 px-2 py-1.5', done && 'opacity-60')}
+                    style={hot ? { background: `${c}0a` } : undefined}
+                    onClick={() => open(t.id)}
+                  >
+                    {done ? <span className={check}>✓</span> : <StatusDot state={hot ? 'outline' : 'dashed'} color={c} size={9} />}
+                    <span className={cardId} style={{ color: c }}>{t.id}</span>
+                    <span className="min-w-0 flex-1 text-body">{displayTitle(t)}</span>
+                    {!done && hot && <span className="text-micro uppercase" style={{ color: c }}>FRONTIER</span>}
+                    {!done && !hot && blockers.length > 0 && <span className={monoDim}>⊘ {blockers.map((b) => b.replace(/^[A-Z]+-/, '')).join(' · ')}</span>}
                   </button>
                 );
               })}
             </div>
           </>
         )}
-        {d.body ? <Markdown text={d.body} /> : <p className="pm-dimtext">No description</p>}
+        {d.body ? <Markdown text={d.body} /> : <p className={dimText}>No description</p>}
         <Tests tests={d.tests} />
         <Thread comments={d.comments || []} />
       </div>
@@ -282,17 +299,17 @@ function PlanDetail({ p }: { p: Plan }) {
   return (
     <>
       <Header id={p.id} color={PLAN_COLOR} chip="Plan" sub={`updated ${relativeTime(p.updatedAt)}`} start={{ entity: p, kind: 'plan' }} />
-      <div className="pm-slide-body">
-        <h1 className="pm-doc-title">{displayTitle(p)}</h1>
+      <div className={slideBody}>
+        <h1 className={docTitle}>{displayTitle(p)}</h1>
         <Meta items={[['Stage', p.stage], ['Project', sprint ? `${sprint.id} — ${sprint.name}` : null], ['Tasks', `${done}/${tasks.length} done`]]} />
         {(ctx.setupNotes || ctx.relevantFiles || dd) && (
-          <details className="pm-context">
-            <summary>Context</summary>
+          <details className="mb-4 rounded-md border border-subtle px-3 py-2">
+            <summary className="cursor-pointer text-subhead">Context</summary>
             {ctx.setupNotes && <Markdown text={ctx.setupNotes} />}
             {(ctx.relevantFiles || []).length > 0 && (
               <>
                 <strong>Relevant files</strong>
-                <ul className="pm-files">
+                <ul className={files}>
                   {(ctx.relevantFiles || []).map((f) => (
                     <li key={f}>{f}</li>
                   ))}
@@ -308,37 +325,44 @@ function PlanDetail({ p }: { p: Plan }) {
           </details>
         )}
         <SectionLabel>Tasks</SectionLabel>
-        {tasks.length === 0 && <div className="pm-empty-inline">No tasks</div>}
+        {tasks.length === 0 && <div className={emptyInline}>No tasks</div>}
         {tasks.map((t, i) => {
           const key = t.id || String(i);
           const isOpen = openTask === key;
           const steps = Array.isArray(t.steps) ? t.steps.map((s, j) => `${j + 1}. ${s}`).join('\n') : t.steps;
           return (
-            <div key={key} className="pm-task">
-              <button className="pm-task-head" onClick={() => setOpenTask(isOpen ? null : key)}>
-                <span className={`pm-task-box${t.passes ? ' pm-task-pass' : ''}`}>{t.passes ? '✓' : ''}</span>
-                <span className="pm-task-title">{t.title || `Task ${i + 1}`}</span>
-                <span className={`pm-task-status pm-status-${t.status || 'pending'}`}>{t.status || 'pending'}</span>
-                {(t.blockedBy || []).length > 0 && <span className="pm-mono-dim">⊘ {(t.blockedBy || []).join(', ')}</span>}
+            <div key={key} className="border-b border-subtle">
+              <button className={cx(plainButton, 'flex w-full items-center gap-2.5 px-0.5 py-2.25')} onClick={() => setOpenTask(isOpen ? null : key)}>
+                <span
+                  className={cx(
+                    'pm-task-box inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border',
+                    t.passes ? 'border-green-9 bg-green-tint text-green' : 'border-strong',
+                  )}
+                >
+                  {t.passes ? '✓' : ''}
+                </span>
+                <span className="min-w-0 flex-1 text-body">{t.title || `Task ${i + 1}`}</span>
+                <span className={cx('shrink-0 rounded-kbd px-1.5 py-px font-mono text-tiny', TASK_STATUS[t.status || 'pending'] ?? TASK_STATUS.pending)}>{t.status || 'pending'}</span>
+                {(t.blockedBy || []).length > 0 && <span className={monoDim}>⊘ {(t.blockedBy || []).join(', ')}</span>}
               </button>
               {isOpen && (
-                <div className="pm-task-details">
-                  {t.id && <div className="pm-mono-dim">{t.id}</div>}
+                <div className="pt-1 pr-1 pb-3.5 pl-6.5 text-body">
+                  {t.id && <div className={monoDim}>{t.id}</div>}
                   {t.description && <Markdown text={t.description} />}
                   {steps && <Markdown text={steps} />}
                   {t.verification && (
-                    <div className="pm-task-verification">
+                    <div>
                       <strong>Verification</strong>
-                      <pre>{t.verification}</pre>
+                      <pre className="rounded-md bg-input px-2.5 py-2 font-mono text-caption whitespace-pre-wrap text-secondary">{t.verification}</pre>
                     </div>
                   )}
                   {(t.progressNotes || []).length > 0 && (
-                    <div className="pm-task-notes">
+                    <div>
                       <strong>Progress</strong>
                       {(t.progressNotes || []).map((n, j) => (
-                        <div key={j} className="pm-task-note">
+                        <div key={j} className="my-1.5 border-l-2 border-strong pl-2.5">
                           <Markdown text={n.text} />
-                          {n.timestamp && <span className="pm-dimtext">{new Date(n.timestamp).toLocaleString()}</span>}
+                          {n.timestamp && <span className={dimText}>{new Date(n.timestamp).toLocaleString()}</span>}
                         </div>
                       ))}
                     </div>
@@ -367,14 +391,14 @@ function SprintDetail({ s }: { s: Sprint }) {
         sub={`${prog.resolved}/${prog.total} resolved${s.status === 'completed' ? ' · completed' : ''}`}
         start={{ entity: s, kind: 'sprint' }}
       />
-      <div className="pm-slide-body">
-        <h1 className="pm-doc-title">{s.name || s.id}</h1>
+      <div className={slideBody}>
+        <h1 className={docTitle}>{s.name || s.id}</h1>
         {s.problemStatement && (
-          <blockquote className="pm-destination">
+          <blockquote className="mb-4 rounded-r-md border-l-3 border-l-indigo-9 bg-accent-tint px-3.5 py-2.5 text-base">
             <strong>Destination:</strong> {s.problemStatement}
           </blockquote>
         )}
-        {s.body ? <Markdown text={s.body} /> : <p className="pm-dimtext">No project doc yet — decisions log and out-of-scope live here.</p>}
+        {s.body ? <Markdown text={s.body} /> : <p className={dimText}>No project doc yet — decisions log and out-of-scope live here.</p>}
         <Thread comments={s.comments || []} />
       </div>
     </>

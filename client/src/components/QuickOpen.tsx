@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBoardCtx } from '../BoardContext';
 import { displayTitle, ticketKind, type Board } from '../model';
+import { cx, emptyInline } from '../classes';
 import { navigate } from '../router';
 
 interface Candidate {
@@ -59,11 +60,11 @@ export function QuickOpen({ onClose }: { onClose: () => void }) {
     else open(c.id);
   };
   return (
-    <div className="pm-qo-backdrop" onClick={onClose}>
-      <div className="pm-qo" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-scrim pt-[12vh]" onClick={onClose}>
+      <div className="w-[min(620px,calc(100vw-32px))] overflow-hidden rounded-xl border border-strong bg-modal shadow-modal" onClick={(e) => e.stopPropagation()}>
         <input
           autoFocus
-          className="pm-qo-input"
+          className="pm-qo-input w-full border-0 border-b border-subtle bg-transparent px-4 py-3.5 text-base text-primary outline-none"
           placeholder="Jump to a ticket, map, plan or project…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -74,13 +75,13 @@ export function QuickOpen({ onClose }: { onClose: () => void }) {
             else if (e.key === 'Enter' && results[sel]) choose(results[sel]);
           }}
         />
-        <div className="pm-qo-results" ref={list}>
-          {results.length === 0 && <div className="pm-empty-inline">No matches</div>}
+        <div className="max-h-[50vh] overflow-y-auto p-1.5" ref={list}>
+          {results.length === 0 && <div className={emptyInline}>No matches</div>}
           {results.map((c, i) => (
-            <button key={`${c.kind}:${c.id}`} data-selected={i === sel} className={`pm-qo-row${i === sel ? ' pm-qo-selected' : ''}`} onMouseEnter={() => setSel(i)} onClick={() => choose(c)}>
-              <span className="pm-qo-id">{c.id}</span>
-              <span className="pm-qo-title">{c.title}</span>
-              <span className="pm-qo-kind">{c.label}</span>
+            <button key={`${c.kind}:${c.id}`} data-selected={i === sel} className={cx('pm-qo-row flex w-full cursor-pointer items-center gap-3 rounded-md border-0 px-2.5 py-1.75 text-left', i === sel ? 'bg-card-hover' : 'bg-transparent')} onMouseEnter={() => setSel(i)} onClick={() => choose(c)}>
+              <span className="w-23 shrink-0 font-mono text-caption text-accent">{c.id}</span>
+              <span className="min-w-0 flex-1 truncate text-base">{c.title}</span>
+              <span className="text-tiny text-muted">{c.label}</span>
             </button>
           ))}
         </div>
