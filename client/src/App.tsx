@@ -6,10 +6,14 @@ import { Detail } from './components/Detail';
 import { Rail, Sidebar, Topbar, VIEWS, type ViewName } from './components/Frame';
 import { QuickOpen } from './components/QuickOpen';
 import { navigate, useLocation } from './router';
+import { emptyInline, monoDim } from './classes';
 import { notify } from './toast';
 import { useBoard, useTermIndex } from './useBoard';
 import { ProjectView } from './views/Project';
 import { ArchiveView, DecisionsView, DocumentsView, GlossaryView, InboxView, PlansView, TicketsView } from './views/Lists';
+
+const home = 'mx-auto my-15 max-w-[720px] px-4';
+const error_ = 'p-10 text-danger';
 
 const VIEW_NAMES = new Set<string>(VIEWS.map((v) => v.view));
 
@@ -54,11 +58,11 @@ function BoardList() {
     api.boards().then(setBoards, (e: Error) => setError(e.message));
   }, []);
   return (
-    <div className="pm-home">
-      <h1 className="pm-home-title">pm</h1>
-      <SectionLabel action={boards ? <span className="pm-count">{boards.length}</span> : undefined}>Boards</SectionLabel>
-      {error && <div className="pm-error">Could not load the boards: {error}</div>}
-      {boards?.length === 0 && <div className="pm-empty-inline">No boards yet. Import one with PmBoard.Api import.</div>}
+    <div className={home}>
+      <h1 className="mb-6 text-display">pm</h1>
+      <SectionLabel action={boards ? <span className={monoDim}>{boards.length}</span> : undefined}>Boards</SectionLabel>
+      {error && <div className={error_}>Could not load the boards: {error}</div>}
+      {boards?.length === 0 && <div className={emptyInline}>No boards yet. Import one with PmBoard.Api import.</div>}
       {boards?.map((b) => <ListRow key={b.slug} id={b.slug} title={b.name} onClick={() => navigate(`/${b.slug}/tickets`)} />)}
     </div>
   );
@@ -96,18 +100,18 @@ function BoardPage({
     if (state.status === 'ready') document.title = `${state.board.config.name || slug} · pm`;
   }, [state, slug]);
 
-  if (state.status === 'loading') return <div className="pm-loading">Loading {slug}…</div>;
+  if (state.status === 'loading') return <div className="p-10 text-muted">Loading {slug}…</div>;
   if (state.status === 'missing')
     return (
-      <div className="pm-home">
-        <div className="pm-error">There is no board called “{slug}”.</div>
+      <div className={home}>
+        <div className={error_}>There is no board called “{slug}”.</div>
         <ListRow id="←" title="All boards" onClick={() => navigate('/')} />
       </div>
     );
   if (state.status === 'error')
     return (
-      <div className="pm-home">
-        <div className="pm-error">
+      <div className={home}>
+        <div className={error_}>
           Could not load {slug}: {state.message}
         </div>
       </div>
@@ -139,9 +143,9 @@ function BoardPage({
     <BoardProvider board={state.board} terms={terms} live={state.live} toast={notify}>
       <div className={`pm-app${withRail ? '' : ' pm-no-rail'}`}>
         <Sidebar view={view} projectId={projectId} onQuickOpen={() => setQuickOpen(true)} />
-        <main className="pm-main">
+        <main className="flex min-h-0 min-w-0 flex-col">
           <Topbar view={view} projectId={projectId} mode={mode} />
-          <div className="pm-content">{main}</div>
+          <div className="pm-content flex-1 overflow-auto px-4 pt-4.5 pb-10">{main}</div>
         </main>
         {withRail && <Rail />}
       </div>

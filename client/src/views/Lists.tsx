@@ -19,12 +19,16 @@ import {
   unresolvedBlockers,
   type Board,
 } from '../model';
+import { age, cx, ddHead, ddId, empty, emptyInline, featured, featuredTitle, hoverRow, monoDim, plainButton, chip } from '../classes';
 import { shortTime } from '../time';
+
+const list = 'mx-auto flex max-w-[900px] flex-col';
+const groupLabel = 'mt-5.5 mb-2 text-label text-muted uppercase';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="pm-empty">{children}</div>;
+  return <div className={empty}>{children}</div>;
 }
 
 type Card = { type: 'item'; e: Item } | { type: 'design'; e: Design } | { type: 'plan'; e: Plan };
@@ -109,7 +113,7 @@ export function TicketsView({ projectId }: { projectId?: string }) {
   const offBoard = nonFrontierTypes(board.config);
   const stages = board.config.stages?.length ? board.config.stages : ['inbox', 'exploring', 'sdd', 'planned', 'done'];
   return (
-    <div className="pm-kanban">
+    <div className="pm-kanban grid min-h-full auto-cols-[minmax(240px,1fr)] grid-flow-col gap-3.5">
       {stages.map((stage) => {
         let cards = columnCards(board, stage).filter((c) => c.type !== 'item' || (c.e.type !== 'decision' && !offBoard.has(c.e.type)));
         if (projectId) cards = cards.filter((c) => c.e.sprintId === projectId || (stage === 'inbox' && !c.e.sprintId));
@@ -118,13 +122,13 @@ export function TicketsView({ projectId }: { projectId?: string }) {
           .filter((c) => c.type !== 'item' || kinds.size === 0 || kinds.has(ticketKind(c.e) ?? ''))
           .sort((a, b) => (b.e.createdAt || '').localeCompare(a.e.createdAt || ''));
         return (
-          <section key={stage} className="pm-column">
-            <div className="pm-column-head">
+          <section key={stage} className="pm-column flex min-w-0 flex-col">
+            <div className="flex items-center gap-2 px-1 pt-1 pb-2.5">
               <StatusDot state={stage === 'inbox' ? 'dashed' : stage === 'done' ? 'solid' : 'outline'} color={stage === 'done' ? 'var(--bg-green)' : 'var(--gray-23)'} size={8} />
-              <span className="pm-column-title">{stage.charAt(0).toUpperCase() + stage.slice(1)}</span>
-              <span className="pm-column-count">{cards.length}</span>
+              <span className="pm-column-title text-heading">{stage.charAt(0).toUpperCase() + stage.slice(1)}</span>
+              <span className={monoDim}>{cards.length}</span>
             </div>
-            <div className="pm-column-cards">
+            <div className="flex flex-col gap-2">
               {cards.map((c) => (
                 <CardFor key={`${c.type}:${c.e.id}`} card={c} />
               ))}
@@ -146,15 +150,15 @@ export function InboxView() {
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   if (!items.length) return <Empty>Inbox zero.</Empty>;
   return (
-    <div className="pm-list">
+    <div className={list}>
       {items.map((t) => {
         const kind = ticketKind(t);
         const blockers = unresolvedBlockers(t, index);
         const last = (t.comments || []).at(-1);
         const meta = [
-          kind && <span key="k" style={{ color: kindColor(kind), fontWeight: 600 }}>{kind}</span>,
-          t.priority && <span key="p" className="pm-meta-priority">{t.priority.toUpperCase()}</span>,
-          blockers.length > 0 && <span key="b" className="pm-meta-blocked">⊘ {blockers.join(' · ')}</span>,
+          kind && <span key="k" className="text-id" style={{ color: kindColor(kind) }}>{kind}</span>,
+          t.priority && <span key="p" className="text-id text-orange">{t.priority.toUpperCase()}</span>,
+          blockers.length > 0 && <span key="b" className="font-mono text-tiny text-orange">⊘ {blockers.join(' · ')}</span>,
           last && <span key="c">{last.author || ''} commented</span>,
         ].filter(Boolean);
         return (
@@ -163,7 +167,7 @@ export function InboxView() {
             id={t.id}
             idColor={kind ? kindColor(kind) : 'var(--text-muted)'}
             title={displayTitle(t)}
-            meta={meta.length ? <span className="pm-meta">{meta}</span> : undefined}
+            meta={meta.length ? <span className="inline-flex items-center gap-2">{meta}</span> : undefined}
             age={shortTime(t.createdAt)}
             onClick={() => open(t.id)}
           />
@@ -177,11 +181,11 @@ export function DocumentsView() {
   const { board, search, open } = useBoardCtx();
   const designs = board.designs.filter((d) => matchesSearch(d, search)).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   return (
-    <div className="pm-list">
-      <SectionLabel dot={<StatusDot state="solid" color={DESIGN_COLOR} size={7} square />} action={<span className="pm-count">{designs.length}</span>}>
+    <div className={list}>
+      <SectionLabel dot={<StatusDot state="solid" color={DESIGN_COLOR} size={7} square />} action={<span className={monoDim}>{designs.length}</span>}>
         Maps &amp; designs
       </SectionLabel>
-      {designs.length === 0 && <div className="pm-empty-inline">No design documents.</div>}
+      {designs.length === 0 && <div className={emptyInline}>No design documents.</div>}
       {designs.map((d) => {
         const linked = (d.linkedItems || d.itemIds || []).length;
         const done = d.stage === 'done';
@@ -218,14 +222,14 @@ export function PlansView() {
   const active = plans.filter((p) => p.stage !== 'done');
   const done = plans.filter((p) => p.stage === 'done');
   return (
-    <div className="pm-list">
-      <SectionLabel dot={<StatusDot state="solid" color={PLAN_COLOR} size={7} square />} action={<span className="pm-count">{active.length}</span>}>
+    <div className={list}>
+      <SectionLabel dot={<StatusDot state="solid" color={PLAN_COLOR} size={7} square />} action={<span className={monoDim}>{active.length}</span>}>
         In flight
       </SectionLabel>
-      {active.length ? sorted(active).map(row) : <div className="pm-empty-inline">Nothing executing.</div>}
+      {active.length ? sorted(active).map(row) : <div className={emptyInline}>Nothing executing.</div>}
       {done.length > 0 && (
         <>
-          <SectionLabel dot={<StatusDot state="solid" color="var(--gray-22)" size={7} square />} action={<span className="pm-count">{done.length}</span>} style={{ marginTop: 18 }}>
+          <SectionLabel dot={<StatusDot state="solid" color="var(--gray-22)" size={7} square />} action={<span className={monoDim}>{done.length}</span>} className="mt-4.5">
             Done
           </SectionLabel>
           {sorted(done).map(row)}
@@ -246,42 +250,42 @@ export function DecisionsView() {
   const groups = decisionGroups(decisions);
   const newest = groups.thisWeek[0];
   const row = (d: Item, faded: boolean) => (
-    <button key={d.id} className={`pm-dd-row${faded ? ' pm-faded' : ''}`} onClick={() => open(d.id)}>
-      <span className="pm-dd-id">{d.id}</span>
-      <span className="pm-dd-title">{displayTitle(d)}</span>
-      <span className="pm-age">{shortTime(d.updatedAt || d.createdAt)}</span>
+    <button key={d.id} className={cx(plainButton, hoverRow, 'flex w-full items-baseline gap-3 px-1 py-1.5', faded && 'opacity-72')} onClick={() => open(d.id)}>
+      <span className={ddId}>{d.id}</span>
+      <span className="flex-1 text-base text-secondary">{displayTitle(d)}</span>
+      <span className={age}>{shortTime(d.updatedAt || d.createdAt)}</span>
     </button>
   );
   return (
-    <div className="pm-reader">
-      {groups.thisWeek.length > 0 && <div className="pm-group-label">This week</div>}
+    <div className="mx-auto max-w-[820px]">
+      {groups.thisWeek.length > 0 && <div className={groupLabel}>This week</div>}
       {groups.thisWeek.map((d) =>
         d === newest ? (
-          <div key={d.id} className="pm-dd-featured" onClick={() => open(d.id)}>
-            <div className="pm-dd-head">
-              <span className="pm-dd-id">{d.id}</span>
-              <span className="pm-dd-featured-title">{displayTitle(d)}</span>
-              <span className="pm-age">{shortTime(d.updatedAt || d.createdAt)}</span>
+          <div key={d.id} className={featured} onClick={() => open(d.id)}>
+            <div className={ddHead}>
+              <span className={ddId}>{d.id}</span>
+              <span className={featuredTitle}>{displayTitle(d)}</span>
+              <span className={age}>{shortTime(d.updatedAt || d.createdAt)}</span>
             </div>
             {d.body && <Markdown text={d.body.split('\n\n').slice(0, 2).join('\n\n')} />}
-            <div className="pm-chips">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {(d.related || []).map((r) => (
-                <button key={r} className="pm-chip" onClick={(e) => (e.stopPropagation(), open(r))}>
+                <button key={r} className={chip} onClick={(e) => (e.stopPropagation(), open(r))}>
                   {r}
                 </button>
               ))}
-              {(d.comments || []).length > 0 && <span className="pm-chip">{plural((d.comments || []).length, 'refinement')} in thread</span>}
+              {(d.comments || []).length > 0 && <span className={chip}>{plural((d.comments || []).length, 'refinement')} in thread</span>}
             </div>
           </div>
         ) : (
           row(d, false)
         ),
       )}
-      {groups.lastWeek.length > 0 && <div className="pm-group-label">Last week</div>}
+      {groups.lastWeek.length > 0 && <div className={groupLabel}>Last week</div>}
       {groups.lastWeek.map((d) => row(d, false))}
       {groups.older.map(([month, ds]) => (
         <div key={month}>
-          <div className="pm-group-label pm-faded">{month} · fading by design</div>
+          <div className={cx(groupLabel, 'opacity-72')}>{month} · fading by design</div>
           {ds.map((d) => row(d, true))}
         </div>
       ))}
@@ -309,22 +313,23 @@ export function GlossaryView() {
   }
   const titleById = new Map(board.items.map((i) => [i.id, i.title || i.id]));
   return (
-    <div className="pm-glossary">
+    <div className="mx-auto max-w-[900px]">
       {list.map((t) => {
         const signpost = terms?.terms.get(t.id)?.kind === 'signpost';
         return (
-          <div key={t.id} className={`pm-term${signpost ? ' pm-term-signpost' : ''}`} onClick={() => open(t.id)}>
-            <div className="pm-dd-head">
-              <span className="pm-dd-id">{t.id}</span>
-              <span className="pm-dd-featured-title">{t.title}</span>
-              {(t.aliases || []).length > 0 && <span className="pm-chip">also: {(t.aliases || []).join(', ')}</span>}
+          <div key={t.id} className={cx(featured, signpost && 'border-l-3 border-l-yellow-9')} onClick={() => open(t.id)}>
+            <div className={ddHead}>
+              <span className={ddId}>{t.id}</span>
+              <span className={featuredTitle}>{t.title}</span>
+              {(t.aliases || []).length > 0 && <span className={chip}>also: {(t.aliases || []).join(', ')}</span>}
             </div>
             {signpost ? (
-              <span className="pm-signpost-note">{signpostHint((t.related || []).map((r) => titleById.get(r) || r))}</span>
+              <span className="text-base text-yellow">{signpostHint((t.related || []).map((r) => titleById.get(r) || r))}</span>
             ) : t.body ? (
               <Markdown text={t.body} />
             ) : (
-              <span className="pm-undefined-note">No definition yet</span>
+              // BOB GAP: Bob has no italic style. `italic` is the one type class here next to a style.
+              <span className="text-base text-muted italic">No definition yet</span>
             )}
           </div>
         );
@@ -346,14 +351,14 @@ export function ArchiveView() {
   const rows = archived.filter((a) => matchesSearch(a, search)).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   if (!rows.length) return <Empty>Archive is empty.</Empty>;
   return (
-    <div className="pm-list">
+    <div className={list}>
       {rows.map((t) => {
         const kind = ticketKind(t);
         return (
           <div key={t.id}>
             <ListRow id={t.id} idColor={kind ? kindColor(kind) : 'var(--text-faint)'} title={displayTitle(t)} age={shortTime(t.updatedAt)} done onClick={() => setExpanded(expanded === t.id ? null : t.id)} />
             {expanded === t.id && (
-              <div className="pm-archive-body">
+              <div className="pt-1.5 pr-3 pb-3.5 pl-15">
                 <Markdown text={t.body || '(no description)'} />
               </div>
             )}
