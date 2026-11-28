@@ -22,7 +22,8 @@ contract is tools/fixtures/cli-expected (DD-024).
 ```
 server/   PmBoard.slnx: src/PmBoard.Api (minimal API, EF Core, Npgsql), tests/PmBoard.Api.Tests
           docs/data-model.md: the schema and the mapping from 0.x. Keep it current.
-client/   Vite + React + TS dashboard on @terjeballestad/bob; e2e/ holds the Playwright tests
+client/   Vite + React + TS dashboard on @terjeballestad/bob; e2e/ holds the Playwright tests,
+          test/ the Bob text-style rules (DD-038)
 cli/      the 1.x `pm` command (DD-021): lib/commands.js is the command table (DD-025); lib/ holds
           copies of shared/
 shared/   glossary.js: 0.x's glossary module, unchanged, plain ESM (its test enforces that)
@@ -42,7 +43,7 @@ colima status || colima start
 cd server && dotnet test
 
 # Client
-cd client && npx tsc -p tsconfig.json && npm run build
+cd client && npx tsc -p tsconfig.json && npm run build && npm test   # npm test: Bob text styles (DD-038)
 node --test shared/glossary.test.mjs
 
 # e2e: wipes the database you point it at, imports e2e/fixture.json, serves client/dist

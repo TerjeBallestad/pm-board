@@ -37,6 +37,9 @@ jobs:
         working-directory: client
       - run: npm run build
         working-directory: client
+      # DD-038: one Bob text style per element, type in app.css only through @apply.
+      - run: npm test
+        working-directory: client
       - run: node --test shared/glossary.test.mjs
 
   e2e:
